@@ -1,6 +1,9 @@
-# twinny-plus README
+# twinny-plus 
+To be or not to be, this is a question.
 
-This is the README for your extension "twinny-plus". After writing up a brief description, we recommend including the following sections.
+## How to start 
+
+npm install
 
 ## Features
 
