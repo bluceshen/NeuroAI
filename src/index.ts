@@ -19,16 +19,16 @@ import {
   WEBUI_TABS
 } from "./common/constants"
 import { ServerMessage } from "./common/types"
-import { setContext } from "./extension/context"
-import { EmbeddingDatabase } from "./extension/embeddings"
-import { FileInteractionCache } from "./extension/file-interaction"
-import { CompletionProvider } from "./extension/providers/completion"
-import { FullScreenProvider } from "./extension/providers/panel"
-import { SidebarProvider } from "./extension/providers/sidebar"
-import { SessionManager } from "./extension/session-manager"
-import { TemplateProvider } from "./extension/template-provider"
-import { delayExecution } from "./extension/utils"
-import { getLineBreakCount } from "./webview/utils"
+import { setContext } from "./extention/public/context"
+import { EmbeddingDatabase } from "./extention/embeding_func/embeddings"
+import { FileInteractionCache } from "./extention/file_func/file-interaction"
+import { CompletionProvider } from "./extention/complete_func/completion"
+import { FullScreenProvider } from "./extention/provider/panel"
+import { SidebarProvider } from "./extention/provider/sidebar"
+import { SessionManager } from "./extention/chat_func/session-manager"
+import { TemplateProvider } from "./extention/public/template-provider"
+import { delayExecution } from "./extention/public/utils"
+import { getLineBreakCount } from "./extention/public/utils"
 
 export async function activate(context: ExtensionContext) {
   setContext(context)

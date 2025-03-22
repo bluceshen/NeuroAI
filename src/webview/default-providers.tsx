@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 import { VSCodeButton } from "@vscode/webview-ui-toolkit/react"
 
 import { API_PROVIDERS } from "../common/constants"
-import { TwinnyProvider } from "../extension/provider-manager"
+import { TwinnyProvider } from "../extention/serve_func/provider-manager"
 
 import {
   SvgAnthropic,

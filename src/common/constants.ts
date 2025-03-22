@@ -1,4 +1,4 @@
-import { defaultTemplates } from "../extension/templates"
+import { defaultTemplates } from "../extention/public/templates"
 
 import { FileContextItem } from "./types"
 
