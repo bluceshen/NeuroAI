@@ -37,7 +37,7 @@ import {
   SymmetryModelProvider,
   ThemeType
 } from "../common/types"
-import { TwinnyProvider } from "../extension/provider-manager"
+import { TwinnyProvider } from "../extention/serve_func/provider-manager"
 
 import { MentionList, MentionListProps, MentionListRef } from "./mention-list"
 

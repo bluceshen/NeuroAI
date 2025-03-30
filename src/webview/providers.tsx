@@ -15,7 +15,7 @@ import {
   DEFAULT_PROVIDER_FORM_VALUES,
   FIM_TEMPLATE_FORMAT
 } from "../common/constants"
-import { TwinnyProvider } from "../extension/provider-manager"
+import { TwinnyProvider } from "../extention/serve_func/provider-manager"
 
 import { DefaultProviderSelect } from "./default-providers"
 import { useOllamaModels, useProviders } from "./hooks"
