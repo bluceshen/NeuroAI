@@ -1,74 +1,70 @@
-# twinny-plus 
-To be or not to be, this is a question.
+# Twinny
 
-## How to start 
+Twinny is a free AI extension for Visual Studio Code, offering powerful AI-assisted coding features.
 
-npm install
+## Supported Providers
 
-## Features
+- localhost OpenAI/Ollama Compatible API (default)
+- [OpenAI](https://openai.com)
+- [Anthropic](https://www.anthropic.com)
+- [OpenRouter](https://openrouter.ai)
+- [Deepseek](https://www.deepseek.com)
+- [Cohere](https://www.cohere.ai)
+- [Mistral AI](https://mistral.ai)
+- [Perplexity](https://www.perplexity.ai)
+- [Groq](https://groq.com)
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## 🚀 Getting Started
 
-For example if there is an image subfolder under your extension project workspace:
+For a quick start guide, visit our [documentation](https://docs.twinny.dev).
 
-\!\[feature X\]\(images/feature-x.png\)
+## Main Features
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+### Fill in the Middle Code Completion
+Twinny provides AI-powered real-time code suggestions to enhance your coding experience.
 
-## Requirements
+### Chat with AI About Your Code
+Use the sidebar to discuss your code with AI, getting explanations, tests, refactoring suggestions, and more.
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+### Additional Features
+- Online and offline operation
+- Customizable API endpoints
+- Preserved chat conversations
+- OpenAI API standard compliance
+- Single and multiline fill-in-the-middle completions
+- Customizable prompt templates
+- Git commit message generation
+- Easy installation via VS Code marketplace
+- Configurable settings (API provider, model, port, path)
+- Direct code solution acceptance
+- New document creation from code blocks
+- Side-by-side diff view
+- Full-screen chat mode
+- Code solution block copying
+- Workspace embeddings for context-aware assistance
+- Symmetry network integration for P2P AI inference
 
-## Extension Settings
+### Workspace Embeddings
+Twinny uses workspace embeddings to provide context-aware AI assistance, improving the relevance of suggestions.
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
-
-For example:
-
-This extension contributes the following settings:
-
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+### Symmetry Network
+A decentralized P2P network for sharing AI inference resources, enhancing the capabilities of Twinny.
 
 ## Known Issues
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+For troubleshooting and known issues, please check our GitHub [issues page](https://github.com/rjmacarthy/twinny/issues).
 
-## Release Notes
+## Contributing
 
-Users appreciate release notes as you update your extension.
+We welcome contributions! Please contact us via [Twitter](https://x.com/twinnydotdev), describe your proposed changes in an issue, and submit a pull request. Twinny is MIT licensed.
 
-### 1.0.0
+## Support Twinny
 
-Initial release of ...
+Twinny is free and open-source. If you'd like to support the project, donations are appreciated:
+Bitcoin: `1PVavNkMmBmUz8nRYdnVXiTgXrAyaxfehj`
 
-### 1.0.1
+For updates, follow us on Twitter: https://x.com/twinnydotdev
 
-Fixed issue #.
+## Disclaimer
 
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Twinny is actively developed and provided "as is". Functionality may vary between updates.
