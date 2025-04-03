@@ -55,7 +55,7 @@ import {
 } from "./fim-templates"
 import { llm } from "../serve_func/llm"
 import { getNodeAtPosition, getParser } from "./parser"
-import { TwinnyProvider } from "../serve_func/provider-manager"
+import { TwinnyProvider, Providers } from "../serve_func/provider-manager"
 import { createStreamRequestBodyFim } from "../serve_func/provider-options"
 import { TemplateProvider } from "../public/template-provider"
 import {
@@ -68,11 +68,16 @@ import {
   getLineBreakCount
 } from "../public/utils"
 
+// 新增接口，管理局部状态
+interface LocalState {
+  completion: string;
+  chunkCount: number;
+  abortController: AbortController | null;
+}
 
 export class CompletionProvider
   extends Base
-  implements InlineCompletionItemProvider
-{
+  implements InlineCompletionItemProvider {
   private _abortController: AbortController | null
   private _acceptedLastCompletion = false
   private _chunkCount = 0
@@ -88,7 +93,7 @@ export class CompletionProvider
   private _parser: Parser | undefined
   private _position: Position | null
   private _prefixSuffix: PrefixSuffix = { prefix: "", suffix: "" }
-  private _provider: TwinnyProvider | undefined
+  private _provider: TwinnyProvider[] | undefined
   private _statusBar: StatusBarItem
   private _templateProvider: TemplateProvider
   private _usingFimTemplate = false
@@ -133,13 +138,311 @@ export class CompletionProvider
     return { options, body }
   }
 
+  private processOnData(
+    provider: TwinnyProvider,
+    data: StreamResponse,
+    state: LocalState
+  ): string {
+
+    console.log("the trun is 1")
+    // 获取停止词
+    const stopWords = getStopWords(
+      provider.modelName,
+      provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic
+    );
+
+    try {
+      const providerFimData = getFimDataFromProvider(provider.provider, data);
+      if (providerFimData === undefined) return "";
+
+      // 更新局部状态
+      state.completion += providerFimData;
+      state.chunkCount++;
+
+      // 检查空响应情况
+      if (
+        state.completion.length > MAX_EMPTY_COMPLETION_CHARS &&
+        state.completion.trim().length === 0
+      ) {
+        this.abortCompletion();
+        logger.log(
+          `Streaming response end as llm in empty completion loop:  ${this._nonce}`
+        );
+      }
+
+      // 如果检测到停止词，则返回当前局部补全内容
+      if (stopWords.some((stopWord) => state.completion.includes(stopWord))) {
+        return state.completion;
+      }
+
+      // 如果不是多行补全，且达到最小块数并且存在换行，则返回补全
+      if (
+        !this.config.multilineCompletionsEnabled &&
+        state.chunkCount >= MIN_COMPLETION_CHUNKS &&
+        LINE_BREAK_REGEX.test(state.completion.trimStart())
+      ) {
+        logger.log(
+          `Streaming response end due to single line completion:  ${this._nonce} \nCompletion: ${state.completion}`
+        );
+        return state.completion;
+      }
+
+      // 检查是否需要多行补全
+      const isMultilineCompletionRequired =
+        !this._isMultilineCompletion &&
+        this.config.multilineCompletionsEnabled &&
+        state.chunkCount >= MIN_COMPLETION_CHUNKS &&
+        LINE_BREAK_REGEX.test(state.completion.trimStart());
+      if (isMultilineCompletionRequired) {
+        logger.log(
+          `Streaming response end due to multiline not required  ${this._nonce} \nCompletion: ${state.completion}`
+        );
+        return state.completion;
+      }
+
+      // 如果存在节点信息，则进一步检查语法平衡、缩进、结构性边界等条件
+      try {
+        if (this._nodeAtPosition) {
+          const takeFirst =
+            MULTILINE_OUTSIDE.includes(this._nodeAtPosition.type) ||
+            (MULTILINE_INSIDE.includes(this._nodeAtPosition.type) &&
+              this._nodeAtPosition.childCount > 2);
+
+          const lineText = getCurrentLineText(this._position) || "";
+          const contextBeforeCompletion = this._prefixSuffix?.prefix || "";
+
+          const isInsideFunction =
+            contextBeforeCompletion.includes("=>") ||
+            contextBeforeCompletion.includes("function") ||
+            this._nodeAtPosition.type.includes("function") ||
+            this._nodeAtPosition.type.includes("method") ||
+            (this._nodeAtPosition.parent?.type.includes("function")) ||
+            (this._nodeAtPosition.parent?.type.includes("method"));
+
+          if (!this._parser) return "";
+
+          if (providerFimData.includes("\n")) {
+            const { rootNode } = this._parser.parse(
+              `${lineText}${state.completion}`
+            );
+            const { hasError } = rootNode;
+
+            const openBrackets: string[] = [];
+            let isBalanced = true;
+
+            for (const char of state.completion) {
+              if (OPENING_BRACKETS.includes(char as Bracket)) {
+                openBrackets.push(char);
+              } else if (CLOSING_BRACKETS.includes(char as Bracket)) {
+                const lastOpen = openBrackets.pop();
+                if (!lastOpen || !this.isMatchingBracket(lastOpen as Bracket, char)) {
+                  isBalanced = false;
+                  break;
+                }
+              }
+            }
+
+            const hasSubstantialContent = state.completion.trim().length > 20;
+            const hasCompleteSyntax = openBrackets.length === 0 && isBalanced;
+            const hasEndPattern = /\}\s*$|\)\s*$|\]\s*$|;\s*$/.test(state.completion);
+            const endsWithEmptyLine = /\n\s*\n\s*$/.test(state.completion);
+
+            const lines = state.completion.split("\n");
+            const lastLineIndent =
+              lines.length > 1
+                ? lines[lines.length - 1].length -
+                lines[lines.length - 1].trimStart().length
+                : 0;
+            const firstLineIndent =
+              lines.length > 0
+                ? lines[0].length - lines[0].trimStart().length
+                : 0;
+            const indentationReturned = lines.length > 2 && lastLineIndent <= firstLineIndent;
+
+            const structuralBoundaryPattern = /\}\s*\n(\s*)\S+/m.test(state.completion);
+
+            if (isInsideFunction && state.completion.includes("}")) {
+              const lastClosingBraceIndex = state.completion.lastIndexOf("}");
+              if (hasCompleteSyntax) {
+                const contentAfterBrace = state.completion
+                  .substring(lastClosingBraceIndex + 1)
+                  .trim();
+                if (!contentAfterBrace || /^\s*\n\s*\S+/.test(contentAfterBrace)) {
+                  state.completion = state.completion.substring(
+                    0,
+                    lastClosingBraceIndex + 1
+                  );
+                  logger.log(
+                    `Trimmed completion at function end: ${this._nonce} \nCompletion: ${state.completion}`
+                  );
+                  return state.completion;
+                }
+              }
+            }
+
+            if (structuralBoundaryPattern && hasCompleteSyntax) {
+              const match = state.completion.match(/\}\s*\n(\s*)\S+/m);
+              if (match && match.index !== undefined) {
+                const closingBracePos = match.index + 1;
+                const indentAfterBrace = match[1].length;
+                if (indentAfterBrace <= firstLineIndent) {
+                  state.completion = state.completion.substring(0, closingBracePos);
+                  logger.log(
+                    `Trimmed completion at structural boundary: ${this._nonce} \nCompletion: ${state.completion}`
+                  );
+                  return state.completion;
+                }
+              }
+            }
+
+            if (
+              this._parser &&
+              this._nodeAtPosition &&
+              this._isMultilineCompletion &&
+              state.chunkCount >= 2 &&
+              (takeFirst || hasCompleteSyntax) &&
+              !hasError &&
+              (hasEndPattern || endsWithEmptyLine || indentationReturned ||
+                (hasSubstantialContent && hasCompleteSyntax))
+            ) {
+              if (
+                MULTI_LINE_DELIMITERS.some((delimiter) =>
+                  state.completion.endsWith(delimiter)
+                ) ||
+                endsWithEmptyLine ||
+                (hasEndPattern && hasCompleteSyntax) ||
+                (structuralBoundaryPattern && hasCompleteSyntax)
+              ) {
+                logger.log(
+                  `Streaming response end due to completion detection ${this._nonce} \nCompletion: ${state.completion}`
+                );
+                return state.completion;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error(e);
+        this.abortCompletion();
+      }
+
+      if (getLineBreakCount(state.completion) >= this.config.maxLines) {
+        logger.log(
+          `Streaming response end due to max line count ${this._nonce} \nCompletion: ${state.completion}`
+        );
+        return state.completion;
+      }
+
+      return "";
+    } catch (e) {
+      console.error(e);
+      return "";
+    }
+  }
+
+  private getCompletionFromProvider(provider: TwinnyProvider): Promise<string> {
+    return new Promise<string>(async (resolve, reject) => {
+      const prompt = await this.getPrompt(provider, this._prefixSuffix);
+      if (!prompt) {
+        resolve("");
+        return;
+      }
+
+      const request = this.buildFimRequest(prompt, provider);
+      const localState: LocalState = {
+        completion: "",
+        chunkCount: 0,
+        abortController: null
+      };
+
+      try {
+        await llm({
+          body: request.body,
+          options: request.options,
+          onStart: (controller) => {
+            localState.abortController = controller;
+          },
+          onData: (data) => {
+            // 触发每次收到的数据块
+            const result = this.processOnData(provider, data as StreamResponse, localState);
+            if (result) {
+              // 如果 processOnData 返回了补全内容，停止接收数据
+              localState.abortController?.abort();
+            }
+
+            return result;
+          },
+          onEnd: () => {
+            resolve(localState.completion);
+          },
+          onError: (err) => {
+            console.error("LLM error for provider:", provider.provider, err);
+            localState.abortController?.abort();
+            resolve(localState.completion);
+          }
+        });
+      } catch (error) {
+        console.error("Error in getCompletionFromProvider:", error);
+        reject(error);
+      }
+    });
+  }
+
+  private async getResult() {
+    // 将防抖和锁机制包裹整个并行请求过程
+    return new Promise<InlineCompletionList>(async (resolve) => {
+      // 防抖：清除之前的定时器，设置新的防抖定时器
+      if (this._debouncer) clearTimeout(this._debouncer);
+
+      // 防抖延迟执行
+      this._debouncer = setTimeout(async () => {
+        // 使用锁机制来确保并行请求的顺序性
+        await this._lock.acquire("twinny.completion", async () => {
+          try {
+            // 获取所有提供者的补全结果
+            const results = await Promise.all(
+              this._provider!.map(async (provider) => {
+                try {
+                  const completion = await this.getCompletionFromProvider(provider);
+                  return { provider, completion };
+                } catch (err) {
+                  console.error(`[${provider.modelName}-${provider.id}] 失败:`, err);
+                  return { provider, completion: "" }; // 返回失败时的空字符串
+                }
+              })
+            );
+
+            // 过滤并处理补全结果
+            const items = results
+              .filter(({ completion }) => completion.trim().length > 0)
+              .map(({ provider, completion }) =>
+                this.provideInlineCompletion(provider, completion)
+              )
+              .filter((item): item is InlineCompletionItem => item !== null);
+
+            // 返回最终的补全列表
+            resolve({ items });
+          } catch (err) {
+            console.error("Error in getResult:", err);
+            resolve({ items: [] }); // 如果有错误，返回空的补全列表
+          }
+        });
+      }, this.config.debounceWait); // 防抖延迟的时间
+    });
+  }
+
   public async provideInlineCompletionItems(
     document: TextDocument,
     position: Position,
     context: InlineCompletionContext
   ): Promise<InlineCompletionItem[] | InlineCompletionList | null | undefined> {
     const editor = window.activeTextEditor
-    this._provider = this.getFimProvider()
+    const providers = this.getFimProvider()
+    if (!providers) return
+    this._provider = Object.values(providers)
+
+    console.log(`Provider count: ${this._provider.length}`);
+
     const isLastCompletionAccepted =
       this._acceptedLastCompletion && !this.config.enableSubsequentCompletions
 
@@ -156,31 +459,31 @@ export class CompletionProvider
 
     if (!languageEnabled) return
 
-    const cachedCompletion = cache.getCache(this._prefixSuffix)
-    if (cachedCompletion && this.config.completionCacheEnabled) {
-      this._completion = cachedCompletion
-      return this.provideInlineCompletion()
-    }
+    // const cachedCompletion = cache.getCache(this._prefixSuffix)
+    // if (cachedCompletion && this.config.completionCacheEnabled) {
+    //   this._completion = cachedCompletion
+    //   return this.provideInlineCompletion()
+    // }
 
-    if (
-      context.triggerKind === InlineCompletionTriggerKind.Invoke &&
-      this.config.autoSuggestEnabled
-    ) {
-      this._completion = this.lastCompletionText
-      return this.provideInlineCompletion()
-    }
+    // if (
+    //   context.triggerKind === InlineCompletionTriggerKind.Invoke &&
+    //   this.config.autoSuggestEnabled
+    // ) {
+    //   this._completion = this.lastCompletionText
+    //   return this.provideInlineCompletion()
+    // }
 
-    if (
-      !this.config.enabled ||
-      !editor ||
-      isLastCompletionAccepted ||
-      this._lastCompletionMultiline ||
-      getShouldSkipCompletion(context, this.config.autoSuggestEnabled) ||
-      getIsMiddleOfString()
-    ) {
-      this._statusBar.text = "$(code)"
-      return
-    }
+    // if (
+    //   !this.config.enabled ||
+    //   !editor ||
+    //   isLastCompletionAccepted ||
+    //   this._lastCompletionMultiline ||
+    //   getShouldSkipCompletion(context, this.config.autoSuggestEnabled) ||
+    //   getIsMiddleOfString()
+    // ) {
+    //   this._statusBar.text = "$(code)"
+    //   return
+    // }
 
     this._chunkCount = 0
     this._document = document
@@ -195,42 +498,10 @@ export class CompletionProvider
       prefixSuffix: this._prefixSuffix
     })
 
-    if (this._debouncer) clearTimeout(this._debouncer)
+    const result = await this.getResult()
 
-    const prompt = await this.getPrompt(this._prefixSuffix)
+    return { items: result.items }
 
-    if (!prompt) return
-
-    return new Promise<ResolvedInlineCompletion>((resolve, reject) => {
-      this._debouncer = setTimeout(() => {
-        this._lock.acquire("twinny.completion", async () => {
-          const provider = this.getFimProvider()
-          if (!provider) return
-          const request = this.buildFimRequest(prompt, provider)
-
-          if (!request) return
-
-          try {
-            await llm({
-              body: request.body,
-              options: request.options,
-              onStart: (controller) => (this._abortController = controller),
-              onEnd: () => this.onEnd(resolve),
-              onError: this.onError,
-              onData: (data) => {
-                const completion = this.onData(data as StreamResponse)
-                if (completion) {
-                  this._abortController?.abort()
-                }
-              }
-            })
-          } catch {
-            this.onError()
-            reject([])
-          }
-        })
-      }, this.config.debounceWait)
-    })
   }
 
   private async tryParseDocument(document: TextDocument) {
@@ -251,200 +522,6 @@ export class CompletionProvider
     }
   }
 
-  private onData(data: StreamResponse | undefined): string {
-    if (!this._provider) return ""
-
-    const stopWords = getStopWords(
-      this._provider.modelName,
-      this._provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic
-    )
-
-    try {
-      const providerFimData = getFimDataFromProvider(
-        this._provider.provider,
-        data
-      )
-      if (providerFimData === undefined) return ""
-
-      this._completion = this._completion + providerFimData
-      this._chunkCount = this._chunkCount + 1
-
-      if (
-        this._completion.length > MAX_EMPTY_COMPLETION_CHARS &&
-        this._completion.trim().length === 0
-      ) {
-        this.abortCompletion()
-        logger.log(
-          `Streaming response end as llm in empty completion loop:  ${this._nonce}`
-        )
-      }
-
-      if (stopWords.some((stopWord) => this._completion.includes(stopWord))) {
-        return this._completion
-      }
-
-      if (
-        !this.config.multilineCompletionsEnabled &&
-        this._chunkCount >= MIN_COMPLETION_CHUNKS &&
-        LINE_BREAK_REGEX.test(this._completion.trimStart())
-      ) {
-        logger.log(
-          `Streaming response end due to single line completion:  ${this._nonce} \nCompletion: ${this._completion}`
-        )
-        return this._completion
-      }
-
-
-      const isMultilineCompletionRequired =
-        !this._isMultilineCompletion &&
-        this.config.multilineCompletionsEnabled &&
-        this._chunkCount >= MIN_COMPLETION_CHUNKS &&
-        LINE_BREAK_REGEX.test(this._completion.trimStart())
-      if (isMultilineCompletionRequired) {
-        logger.log(
-          `Streaming response end due to multiline not required  ${this._nonce} \nCompletion: ${this._completion}`
-        )
-        return this._completion
-      }
-
-      try {
-        if (this._nodeAtPosition) {
-          const takeFirst =
-            MULTILINE_OUTSIDE.includes(this._nodeAtPosition?.type) ||
-            (MULTILINE_INSIDE.includes(this._nodeAtPosition?.type) &&
-              this._nodeAtPosition?.childCount > 2)
-
-
-          const lineText = getCurrentLineText(this._position) || ""
-          const contextBeforeCompletion = this._prefixSuffix?.prefix || ""
-
-
-          const isInsideFunction =
-            contextBeforeCompletion.includes("=>") ||
-            contextBeforeCompletion.includes("function") ||
-            this._nodeAtPosition?.type.includes("function") ||
-            this._nodeAtPosition?.type.includes("method") ||
-            this._nodeAtPosition?.parent?.type.includes("function") ||
-            this._nodeAtPosition?.parent?.type.includes("method");
-
-          if (!this._parser) return ""
-
-          if (providerFimData.includes("\n")) {
-            const { rootNode } = this._parser.parse(
-              `${lineText}${this._completion}`
-            )
-
-            const { hasError } = rootNode
-
-            const openBrackets: string[] = [];
-            let isBalanced = true;
-
-            for (const char of this._completion) {
-              if (OPENING_BRACKETS.includes(char as Bracket)) {
-                openBrackets.push(char);
-              } else if (CLOSING_BRACKETS.includes(char as Bracket)) {
-                const lastOpen = openBrackets.pop();
-
-                if (!lastOpen || !this.isMatchingBracket(lastOpen as Bracket, char)) {
-                  isBalanced = false;
-                  break;
-                }
-              }
-            }
-
-            const hasSubstantialContent = this._completion.trim().length > 20;
-            const hasCompleteSyntax = openBrackets.length === 0 && isBalanced;
-
-            const hasEndPattern = /\}\s*$|\)\s*$|\]\s*$|;\s*$/.test(this._completion);
-
-            const endsWithEmptyLine = /\n\s*\n\s*$/.test(this._completion);
-
-            const lines = this._completion.split("\n");
-            const lastLineIndent = lines.length > 1 ?
-              lines[lines.length - 1].length - lines[lines.length - 1].trimStart().length : 0;
-            const firstLineIndent = lines.length > 0 ?
-              lines[0].length - lines[0].trimStart().length : 0;
-            const indentationReturned = lines.length > 2 && lastLineIndent <= firstLineIndent;
-
-            const structuralBoundaryPattern = /\}\s*\n(\s*)\S+/m.test(this._completion);
-
-            if (isInsideFunction && this._completion.includes("}")) {
-              const lastClosingBraceIndex = this._completion.lastIndexOf("}");
-
-              if (hasCompleteSyntax) {
-                const contentAfterBrace = this._completion.substring(lastClosingBraceIndex + 1).trim();
-
-                if (!contentAfterBrace || /^\s*\n\s*\S+/.test(contentAfterBrace)) {
-                  this._completion = this._completion.substring(0, lastClosingBraceIndex + 1);
-                  logger.log(
-                    `Trimmed completion at function end: ${this._nonce} \nCompletion: ${this._completion}`
-                  )
-                  return this._completion;
-                }
-              }
-            }
-
-            if (structuralBoundaryPattern && hasCompleteSyntax) {
-              const match = this._completion.match(/\}\s*\n(\s*)\S+/m);
-              if (match && match.index !== undefined) {
-                const closingBracePos = match.index + 1;
-
-                const indentAfterBrace = match[1].length;
-                if (indentAfterBrace <= firstLineIndent) {
-                  this._completion = this._completion.substring(0, closingBracePos);
-                  logger.log(
-                    `Trimmed completion at structural boundary: ${this._nonce} \nCompletion: ${this._completion}`
-                  )
-                  return this._completion;
-                }
-              }
-            }
-
-            if (
-              this._parser &&
-              this._nodeAtPosition &&
-              this._isMultilineCompletion &&
-              this._chunkCount >= 2 &&
-              (takeFirst || hasCompleteSyntax) &&
-              !hasError &&
-              (hasEndPattern || endsWithEmptyLine || indentationReturned ||
-               (hasSubstantialContent && hasCompleteSyntax))
-            ) {
-              if (
-                MULTI_LINE_DELIMITERS.some((delimiter) =>
-                  this._completion.endsWith(delimiter)
-                ) ||
-                endsWithEmptyLine ||
-                (hasEndPattern && hasCompleteSyntax) ||
-                (structuralBoundaryPattern && hasCompleteSyntax)
-              ) {
-                logger.log(
-                  `Streaming response end due to completion detection ${this._nonce} \nCompletion: ${this._completion}`
-                )
-                return this._completion
-              }
-            }
-          }
-        }
-      } catch (e) {
-        console.error(e)
-        this.abortCompletion()
-      }
-
-      if (getLineBreakCount(this._completion) >= this.config.maxLines) {
-        logger.log(
-          `Streaming response end due to max line count ${this._nonce} \nCompletion: ${this._completion}`
-        )
-        return this._completion
-      }
-
-      return ""
-    } catch (e) {
-      console.error(e)
-      return ""
-    }
-  }
-
   private isMatchingBracket(open: Bracket, close: string): boolean {
     const pairs: Record<Bracket, string> = {
       "(": ")",
@@ -452,10 +529,6 @@ export class CompletionProvider
       "{": "}"
     };
     return pairs[open] === close;
-  }
-
-  private onEnd(resolve: (completion: ResolvedInlineCompletion) => void) {
-    return resolve(this.provideInlineCompletion())
   }
 
   public onError = () => {
@@ -470,15 +543,12 @@ export class CompletionProvider
       return ""
     }
 
-    const language = `${lang.syntaxComments?.start || ""} Language: ${
-      lang?.langName
-    } (${languageId}) ${lang.syntaxComments?.end || ""}`
+    const language = `${lang.syntaxComments?.start || ""} Language: ${lang?.langName
+      } (${languageId}) ${lang.syntaxComments?.end || ""}`
 
-    const path = `${
-      lang.syntaxComments?.start || ""
-    } File uri: ${uri.toString()} (${languageId}) ${
-      lang.syntaxComments?.end || ""
-    }`
+    const path = `${lang.syntaxComments?.start || ""
+      } File uri: ${uri.toString()} (${languageId}) ${lang.syntaxComments?.end || ""
+      }`
 
     return `\n${language}\n${path}\n`
   }
@@ -628,12 +698,12 @@ export class CompletionProvider
     return fileChunks.join("\n")
   }
 
-  private removeStopWords(completion: string) {
-    if (!this._provider) return completion
+  private removeStopWords(provider: TwinnyProvider, completion: string) {
+    if (!provider) return completion
     let filteredCompletion = completion
     const stopWords = getStopWords(
-      this._provider.modelName,
-      this._provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic
+      provider.modelName,
+      provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic
     )
     stopWords.forEach((stopWord) => {
       filteredCompletion = filteredCompletion.split(stopWord).join("")
@@ -641,14 +711,14 @@ export class CompletionProvider
     return filteredCompletion
   }
 
-  private async getPrompt(prefixSuffix: PrefixSuffix) {
-    if (!this._provider) return ""
-    if (!this._document || !this._position || !this._provider) return ""
+  private async getPrompt(provider: TwinnyProvider, prefixSuffix: PrefixSuffix) {
+    if (!provider) return ""
+    if (!this._document || !this._position || !provider) return ""
 
     const documentLanguage = this._document.languageId
     const fileInteractionContext = await this.getFileInteractionContext()
 
-    if (this._provider.fimTemplate === FIM_TEMPLATE_FORMAT.custom) {
+    if (provider.fimTemplate === FIM_TEMPLATE_FORMAT.custom) {
       const systemMessage =
         await this._templateProvider.readSystemMessageTemplate("fim-system.hbs")
 
@@ -668,7 +738,7 @@ export class CompletionProvider
       }
     }
 
-    if (this._provider.repositoryLevel) {
+    if (provider.repositoryLevel) {
       const repositoryLevelData = await this.getRelevantDocuments()
       const repoName = workspace.name
       const currentFile = await this._document.uri.fsPath
@@ -681,8 +751,8 @@ export class CompletionProvider
     }
 
     return getFimPrompt(
-      this._provider.modelName,
-      this._provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic,
+      provider.modelName,
+      provider.fimTemplate || FIM_TEMPLATE_FORMAT.automatic,
       {
         context: fileInteractionContext || "",
         prefixSuffix,
@@ -717,30 +787,31 @@ export class CompletionProvider
     )
   }
 
-  private provideInlineCompletion(): InlineCompletionItem[] {
-    const editor = window.activeTextEditor
+  private provideInlineCompletion(provider: TwinnyProvider, completion: string): InlineCompletionItem | null {
+    const editor = window.activeTextEditor;
+    if (!editor || !this._position) return null; // 直接返回 null，而不是 []
 
-    if (!editor || !this._position) return []
+    // 先移除停止词，再格式化补全内容
+    const filteredCompletion = this.removeStopWords(provider, completion);
+    const formattedCompletion = new CompletionFormatter(editor).format(filteredCompletion);
 
-    const formattedCompletion = new CompletionFormatter(editor).format(
-      this.removeStopWords(this._completion)
-    )
+    // 记录日志
+    this.logCompletion(formattedCompletion);
 
-    this.logCompletion(formattedCompletion)
+    // 缓存处理，增加模型 ID 避免不同模型的补全内容互相影响
+    if (this.config.completionCacheEnabled) {
+      this._prefixSuffix.suffix = `${this._prefixSuffix.suffix}-${provider.modelName}`
+      cache.setCache(this._prefixSuffix, formattedCompletion);
+    }
 
-    if (this.config.completionCacheEnabled)
-      cache.setCache(this._prefixSuffix, formattedCompletion)
-
-    this._completion = ""
+    // 状态更新
     this._statusBar.text = "$(code)"
     this.lastCompletionText = formattedCompletion
-    this._lastCompletionMultiline = getLineBreakCount(this._completion) > 1
+    this._lastCompletionMultiline = getLineBreakCount(formattedCompletion) > 1;
 
-    return [
-      new InlineCompletionItem(
-        formattedCompletion,
-        new Range(this._position, this._position)
-      )
-    ]
+    return new InlineCompletionItem(
+      formattedCompletion,
+      new Range(this._position, this._position)
+    );
   }
 }

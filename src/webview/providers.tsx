@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   VSCodeButton,
@@ -9,6 +9,7 @@ import {
   VSCodePanelView,
   VSCodeTextField
 } from "@vscode/webview-ui-toolkit/react"
+import Select, { MultiValue } from "react-select";
 
 import {
   API_PROVIDERS,
@@ -43,6 +44,24 @@ export const Providers = () => {
 
   const fimProviders = Object.values(getProvidersByType("fim")) || []
   const activeFimProvider = fimProvider
+  // 生成react-select需要的options格式
+  const fimOptions = fimProviders
+    .sort((a, b) => a.label.localeCompare(b.label))
+    .map(provider => ({
+      value: provider.label,
+      label: provider.label,
+      data: provider
+    }));
+
+  const [selectedFimProviders, setSelectedFimProviders] = useState<TwinnyProvider[]>(
+    activeFimProvider ? Object.values(activeFimProvider) : []
+  );
+
+  useEffect(() => {
+    // 当 activeFimProvider 发生变化时，更新 selectedFimProviders
+    setSelectedFimProviders(Object.values(activeFimProvider) || []);
+  }, [activeFimProvider]);
+
 
   const handleClose = () => {
     setView("providers")
@@ -100,32 +119,60 @@ export const Providers = () => {
     setView("providers")
   }
 
-  const handleFimProviderChange = (e: unknown) => {
-    const event = e as React.ChangeEvent<HTMLSelectElement>
-    const value = event.target.value
-    const provider = providers[value]
-    setActiveFimProvider(provider)
-  }
+  // 处理多选变化
+  const handleFimProviderChange = (
+    selectedOptions: MultiValue<{ value: string; label: string; data: TwinnyProvider }>
+  ) => {
+    const selectedProviders = selectedOptions.map(option => option.data);
+    setSelectedFimProviders(selectedProviders);
+    setActiveFimProvider(selectedProviders)
+  };
 
+  // 自定义样式对象
+  const customStyles = {
+    option: (provided: any, state: { isFocused: any; }) => ({
+      ...provided,
+      backgroundColor: state.isFocused ? '#ffffff' : 'transparent',
+      color: '#000000', // 直接设置为黑色
+      '&:hover': {
+        backgroundColor: '#000000',
+        color: '#ffffff',
+      },
+    }),
+    menu: (provided: any) => ({
+      ...provided,
+      background: '#ffffff', // 下拉菜单背景白色
+      border: '1px solid #c0c4d6',
+    }),
+    control: (provided: any) => ({
+      ...provided,
+      backgroundColor: '#ffffff', // 控件背景白色
+      borderColor: '#c0c4d6',
+    }),
+  };
+
+  // 修改后的renderFimSection
   const renderFimSection = () => (
     <div className={styles.fimSection}>
       <div className={styles.fimSelector}>
-        <VSCodeDropdown
-          value={activeFimProvider?.id}
-          name="fimProvider"
+        <label>{t('active-fim-providers')}</label>
+        <Select
+          isMulti
+          options={fimOptions}
+          value={selectedFimProviders.map(p => ({
+            value: p.label,
+            label: p.label,
+            data: p
+          }))}
           onChange={handleFimProviderChange}
-        >
-          {fimProviders
-            .sort((a, b) => a.label.localeCompare(b.label))
-            .map((provider, index) => (
-              <VSCodeOption key={index} value={provider.id}>
-                {provider.label}
-              </VSCodeOption>
-            ))}
-        </VSCodeDropdown>
+          className={styles.selectContainer}
+          classNamePrefix="react-select"
+          placeholder={t('select-fim-providers')}
+          styles={customStyles}
+        />
       </div>
     </div>
-  )
+  );
 
   const renderView = () => {
     switch (view) {

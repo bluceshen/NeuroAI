@@ -33,7 +33,7 @@ export interface TwinnyProvider {
   type: string
 }
 
-type Providers = Record<string, TwinnyProvider> | undefined
+export type Providers = Record<string, TwinnyProvider> | undefined
 
 export class ProviderManager {
   _context: ExtensionContext
@@ -54,33 +54,40 @@ export class ProviderManager {
     )
   }
 
-  handleMessage(message: ClientMessage<TwinnyProvider>) {
+  handleMessage(message: ClientMessage<TwinnyProvider|TwinnyProvider[]>) {
     const { data: provider } = message
     switch (message.type) {
       case PROVIDER_EVENT_NAME.addProvider:
-        return this.addProvider(provider)
+        if(Array.isArray(provider)) return;
+        return this.addProvider(provider) // ok
       case PROVIDER_EVENT_NAME.removeProvider:
-        return this.removeProvider(provider)
+        if(Array.isArray(provider)) return;
+        return this.removeProvider(provider)  // ok
       case PROVIDER_EVENT_NAME.updateProvider:
-        return this.updateProvider(provider)
+        if(Array.isArray(provider)) return;
+        return this.updateProvider(provider)  // ok
       case PROVIDER_EVENT_NAME.getActiveChatProvider:
+        if(Array.isArray(provider)) return;
         return this.getActiveChatProvider()
       case PROVIDER_EVENT_NAME.getActiveFimProvider:
-        return this.getActiveFimProvider()
+        return this.getActiveFimProvider()   // ok
       case PROVIDER_EVENT_NAME.getActiveEmbeddingsProvider:
         return this.getActiveEmbeddingsProvider()
       case PROVIDER_EVENT_NAME.setActiveChatProvider:
+        if(Array.isArray(provider)) return;
         return this.setActiveChatProvider(provider)
       case PROVIDER_EVENT_NAME.setActiveFimProvider:
-        return this.setActiveFimProvider(provider)
+        return this.setActiveFimProvider(provider) // ok
       case PROVIDER_EVENT_NAME.setActiveEmbeddingsProvider:
+        if(Array.isArray(provider)) return;
         return this.setActiveEmbeddingsProvider(provider)
       case PROVIDER_EVENT_NAME.copyProvider:
-        return this.copyProvider(provider)
+        if(Array.isArray(provider)) return;
+        return this.copyProvider(provider)  // ok
       case PROVIDER_EVENT_NAME.getAllProviders:
         return this.getAllProviders()
       case PROVIDER_EVENT_NAME.resetProvidersToDefaults:
-        return this.resetProvidersToDefaults()
+        return this.resetProvidersToDefaults()  // --
     }
   }
 
@@ -119,8 +126,9 @@ export class ProviderManager {
     } as TwinnyProvider
   }
 
+  // 获取默认补全填充提供者
   getDefaultFimProvider() {
-    return {
+    const provider1 = {
       apiHostname: "0.0.0.0",
       apiPath: "/api/generate",
       apiPort: 11434,
@@ -132,12 +140,26 @@ export class ProviderManager {
       provider: API_PROVIDERS.Ollama,
       type: "fim"
     } as TwinnyProvider
+
+    return provider1
   }
 
   addDefaultProviders() {
     this.addDefaultChatProvider()
     this.addDefaultFimProvider()
     this.addDefaultEmbeddingsProvider()
+  }
+
+  // 给定providers数组，返回Record
+  createProvidersRecord(providers: TwinnyProvider[]): Providers {
+    if (providers.length === 0) {
+      return undefined;
+    }
+
+    return providers.reduce((acc, prov) => {
+      acc[prov.id] = prov;
+      return acc;
+    }, {} as Record<string, TwinnyProvider>);
   }
 
   addDefaultChatProvider(): TwinnyProvider {
@@ -174,9 +196,11 @@ export class ProviderManager {
         provider
       )
     } else if (provider.type === "fim") {
+      // 修改保存的项，使得保存的是 Providers
+      const prov = this.createProvidersRecord([provider])
       this._context.globalState.update(
         ACTIVE_FIM_PROVIDER_STORAGE_KEY,
-        provider
+        prov
       )
     } else {
       this._context.globalState.update(
@@ -213,8 +237,9 @@ export class ProviderManager {
     return provider
   }
 
+  // 修改返回类型为Providers
   getActiveFimProvider() {
-    const provider = this._context.globalState.get<TwinnyProvider>(
+    const provider = this._context.globalState.get<Providers>(
       ACTIVE_FIM_PROVIDER_STORAGE_KEY
     )
     this._webView?.postMessage({
@@ -241,9 +266,19 @@ export class ProviderManager {
     return this.getActiveChatProvider()
   }
 
-  setActiveFimProvider(provider?: TwinnyProvider) {
+  // 将provider的修改同步到Record中
+  setActiveFimProvider(provider?: TwinnyProvider | TwinnyProvider[]) {
     if (!provider) return
-    this._context.globalState.update(ACTIVE_FIM_PROVIDER_STORAGE_KEY, provider)
+
+    if(Array.isArray(provider)) {
+      const data = this.createProvidersRecord(provider);
+      this._context.globalState.update(ACTIVE_FIM_PROVIDER_STORAGE_KEY, data)
+      return this.getActiveFimProvider()
+    }
+
+    const providers = this.getActiveFimProvider() || {}
+    providers[provider.id] = provider;
+    this._context.globalState.update(ACTIVE_FIM_PROVIDER_STORAGE_KEY, providers)
     return this.getActiveFimProvider()
   }
 
@@ -293,10 +328,14 @@ export class ProviderManager {
     const activeFimProvider = this.getActiveFimProvider()
     const activeChatProvider = this.getActiveChatProvider()
     const activeEmbeddingsProvider = this.getActiveEmbeddingsProvider()
+
     if (!provider) return
+
     providers[provider.id] = provider
     this._context.globalState.update(INFERENCE_PROVIDERS_STORAGE_KEY, providers)
-    if (provider.id === activeFimProvider?.id)
+
+    // 如果填充提供者不为空，且现有的提供者位于提供者里面
+    if (activeFimProvider && Object.values(activeFimProvider).some(prov => prov.id === provider.id))
       this.setActiveFimProvider(provider)
     if (provider.id === activeChatProvider?.id)
       this.setActiveChatProvider(provider)

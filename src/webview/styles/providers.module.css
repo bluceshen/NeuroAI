@@ -12,6 +12,12 @@
   font-weight: 600;
 }
 
+.selectContainer {
+  margin-top: 8px;
+  font-family: var(--vscode-font-family);
+}
+
+
 .fimSelector {
   width: 100%;
   margin: 8px 0;
@@ -41,7 +47,7 @@
   border: none;
 }
 
-.providerSelector > div {
+.providerSelector>div {
   width: 48%;
 }
 
@@ -78,7 +84,7 @@
   margin-top: 8px;
 }
 
-.providerDetails > div {
+.providerDetails>div {
   text-wrap: nowrap;
   text-overflow: ellipsis;
 }

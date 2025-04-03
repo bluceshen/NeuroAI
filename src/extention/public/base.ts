@@ -6,7 +6,7 @@ import {
   ACTIVE_FIM_PROVIDER_STORAGE_KEY
 } from "../../common/constants"
 
-import { TwinnyProvider } from "../serve_func/provider-manager"
+import { TwinnyProvider, Providers } from "../serve_func/provider-manager"
 import { getIsOpenAICompatible } from "./utils"
 
 export class Base {
@@ -25,7 +25,7 @@ export class Base {
   }
 
   public getFimProvider = () => {
-    const provider = this.context?.globalState.get<TwinnyProvider>(
+    const provider = this.context?.globalState.get<Providers>(
       ACTIVE_FIM_PROVIDER_STORAGE_KEY
     )
     return provider

@@ -284,12 +284,14 @@ export const useGithubPRs = () => {
   }
 }
 
+// 修改使用提供者的类型
 export const useProviders = () => {
   const [providers, setProviders] = useState<Record<string, TwinnyProvider>>({})
   const [chatProvider, setChatProvider] = useState<TwinnyProvider | null>(null)
-  const [fimProvider, setFimProvider] = useState<TwinnyProvider | null>(null)
+  const [fimProvider, setFimProvider] = useState<Record<string, TwinnyProvider>>({})
   const [embeddingProvider, setEmbeddingProvider] =
     useState<TwinnyProvider | null>(null)
+
   const handler = (event: MessageEvent) => {
     const message: ServerMessage<
       Record<string, TwinnyProvider> | TwinnyProvider
@@ -304,8 +306,8 @@ export const useProviders = () => {
     }
     if (message?.type === PROVIDER_EVENT_NAME.getActiveFimProvider) {
       if (message.data) {
-        const provider = message.data as TwinnyProvider
-        setFimProvider(provider)
+        const provider = message.data as Record<string, TwinnyProvider>
+        setFimProvider(provider || {})
       }
     }
     if (message?.type === PROVIDER_EVENT_NAME.getActiveEmbeddingsProvider) {
@@ -345,11 +347,12 @@ export const useProviders = () => {
     } as ClientMessage<TwinnyProvider>)
   }
 
-  const setActiveFimProvider = (provider: TwinnyProvider) => {
+  const setActiveFimProvider = (provider: TwinnyProvider | TwinnyProvider[]) => {
+    console.log(provider)
     global.vscode.postMessage({
       type: PROVIDER_EVENT_NAME.setActiveFimProvider,
       data: provider
-    } as ClientMessage<TwinnyProvider>)
+    } as ClientMessage<TwinnyProvider|TwinnyProvider[]>)
   }
 
   const setActiveEmbeddingsProvider = (provider: TwinnyProvider) => {
