@@ -2,10 +2,12 @@
 import * as assert from "assert"
 import * as vscode from "vscode"
 
-import { CompletionFormatter } from "../../extension/completion-formatter"
+import { CompletionProvider } from "../../extention/complete_func/completion"
+import { CompletionFormatter } from "../../extention/complete_func/completion-formatter"
 
-suite("Completion formatter", () => {
+suite("CompletionProvider", () => {
   let editor: vscode.TextEditor
+  let position: vscode.TextEdit
 
   suiteTeardown(async () => {
     await vscode.commands.executeCommand("workbench.action.closeAllEditors")
