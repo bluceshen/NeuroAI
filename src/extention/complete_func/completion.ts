@@ -151,7 +151,7 @@ export class CompletionProvider
         prefix: this._prefixSuffix.prefix,
         suffix: `${this._prefixSuffix.suffix}-${provider.modelName}`
       };
-  
+
       const completion = cache.getCache(cacheKey);
       if (completion != null && completion != undefined) {
         const item = this.provideInlineCompletion(provider, completion);
@@ -161,8 +161,8 @@ export class CompletionProvider
           console.log("provideInlineCompletion returned null for provider:", provider.modelName);
         }
       }
-  
-      return cache.getCache(cacheKey) === null;
+
+      return completion === null || completion === undefined;
     });
 
 
