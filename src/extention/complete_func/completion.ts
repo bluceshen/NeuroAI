@@ -100,7 +100,9 @@ export class CompletionProvider
   private _statusBar: StatusBarItem
   private _templateProvider: TemplateProvider
   private _usingFimTemplate = false
+  private _finalResults: InlineCompletionItem[] = []
   public lastCompletionText = ""
+
 
   constructor(
     statusBar: StatusBarItem,
@@ -141,7 +143,30 @@ export class CompletionProvider
     return { options, body }
   }
 
+  private getProviderCompletionLast() {
 
+    // 如果缓存存在，移除对应的提供者
+    this._provider = this._provider?.filter((provider) => {
+      const cacheKey = {
+        prefix: this._prefixSuffix.prefix,
+        suffix: `${this._prefixSuffix.suffix}-${provider.modelName}`
+      };
+  
+      const completion = cache.getCache(cacheKey);
+      if (completion != null && completion != undefined) {
+        const item = this.provideInlineCompletion(provider, completion);
+        if (item) {
+          this._finalResults.push(item);
+        } else {
+          console.log("provideInlineCompletion returned null for provider:", provider.modelName);
+        }
+      }
+  
+      return cache.getCache(cacheKey) === null;
+    });
+
+
+  }
 
   public async provideInlineCompletionItems(
     document: TextDocument,
@@ -155,9 +180,6 @@ export class CompletionProvider
 
     console.log(`the turn console prin-- Provider count: ${this._provider.length}`);
 
-    const isLastCompletionAccepted =
-      this._acceptedLastCompletion && !this.config.enableSubsequentCompletions
-
     this._prefixSuffix = getPrefixSuffix(
       this.config.contextLength,
       document,
@@ -169,7 +191,30 @@ export class CompletionProvider
       this.config.enabledLanguages["*"] ??
       true
 
-    if (!languageEnabled) return
+    if (!languageEnabled) {
+      return
+    }
+
+    // 遍历提供者并尝试从缓存中获取补全项
+    if (this.config.completionCacheEnabled) {
+      this.getProviderCompletionLast();
+      console.log("Final results from cache:", this._finalResults);
+    }
+    if (this._provider.length === 0) {
+      console.log("No providers left, returning cached results.");
+      return new InlineCompletionList(this._finalResults)
+    }
+
+    // 如果未启用，没有编辑器，或者应该跳过补全，或者字符串中间，则返回
+    if (
+      !this.config.enabled ||
+      !editor ||
+      getShouldSkipCompletion(context, this.config.autoSuggestEnabled) ||
+      getIsMiddleOfString()
+    ) {
+      this._statusBar.text = "$(code)"
+      return
+    }
 
     this._chunkCount = 0
     this._document = document
@@ -187,13 +232,16 @@ export class CompletionProvider
     if (this._debouncer) clearTimeout(this._debouncer)
 
     const results = await this.getResult();
-    return new InlineCompletionList(results); // 自动处理空数组情况
+
+    this._finalResults.concat(results)
+    return new InlineCompletionList(this._finalResults); // 自动处理空数组情况
   }
 
 
   private onEnd(provider: TwinnyProvider, completion: string, resolve: (completion: ResolvedInlineCompletion) => void) {
     // 先获取结果
     const data = this.provideInlineCompletion(provider, completion);
+
     // 根据结果将结果作为参数传递给resolve
     resolve(data ? [data] : []);
   }
@@ -263,7 +311,7 @@ export class CompletionProvider
   private onData(data: StreamResponse | undefined, localState: LocalState, provider: TwinnyProvider): string {
     if (!provider) return ""
 
-    console.log("the turn is", localState.onDataNums+=1, provider.modelName, Date.now())
+    // console.log("the turn is", localState.onDataNums += 1, provider.modelName, Date.now())
 
     const stopWords = getStopWords(
       provider.modelName,
@@ -752,8 +800,14 @@ export class CompletionProvider
 
     // 缓存处理，增加模型 ID 避免不同模型的补全内容互相影响
     if (this.config.completionCacheEnabled) {
-      this._prefixSuffix.suffix = `${this._prefixSuffix.suffix}-${provider.modelName}`
-      cache.setCache(this._prefixSuffix, formattedCompletion);
+      // 构造包含模型名称的 PrefixSuffix
+      const cachePrefixSuffix: PrefixSuffix = {
+        prefix: this._prefixSuffix.prefix,
+        suffix: `${this._prefixSuffix.suffix}-${provider.modelName}`
+      };
+
+      // 使用构造的 PrefixSuffix 作为缓存键
+      cache.setCache(cachePrefixSuffix, formattedCompletion);
     }
 
     // 状态更新

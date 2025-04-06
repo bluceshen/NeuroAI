@@ -9,10 +9,9 @@ declare module "hypercore-crypto" {
     randomBytes: (n?: number) => Buffer
     verify: (challenge: Buffer, signature: Buffer, publicKey: Buffer) => boolean
   }
-
+  
   export default hyperCoreCrypto
 }
-
 declare module "*.css"
 
 declare module "*.css" {
@@ -33,3 +32,6 @@ interface Window {
     postMessage: (msg: unknown) => void
   }
 }
+
+fffff
+
