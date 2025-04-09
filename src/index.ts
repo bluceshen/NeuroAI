@@ -42,7 +42,9 @@ export async function activate(context: ExtensionContext) {
     context,
     templateDir,
     statusBarItem
+    
   )
+
 
   const homeDir = os.homedir()
   const dbDir = path.join(homeDir, ".twinny/embeddings")

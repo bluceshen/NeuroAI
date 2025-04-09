@@ -27,6 +27,7 @@ import {
   EVENT_NAME,
   EXTENSION_CONTEXT_NAME,
   EXTENSION_SESSION_NAME,
+  GLOBAL_STORAGE_KEY,
   SYMMETRY_EMITTER_KEY,
   SYSTEM,
   USER,
@@ -611,6 +612,7 @@ export class Chat extends Base {
     })
   }
 
+  // 定义一个私有方法 shouldUseStreaming，用于判断是否应该使用流式处理
   private shouldUseStreaming(provider: TwinnyProvider): boolean {
     const supportsStreaming =
       models[provider?.provider as keyof typeof models]?.supportsStreaming
@@ -708,6 +710,7 @@ export class Chat extends Base {
 
 
   public async completion(
+    
     messages: ChatCompletionMessage[],
     fileContexts?: FileContextItem[],
     conversationId?: string // Add parameter for conversation ID
@@ -716,8 +719,10 @@ export class Chat extends Base {
     this._isCancelled = false
     this.sendEditorLanguage()
 
-    // Debug log to track the conversation ID being received
     console.log("Received completion request with conversation ID:", conversationId)
+    const chosenModels = this.context?.globalState.get(GLOBAL_STORAGE_KEY.chosenModels) as string[]
+    console.log("bd choseModels: ",chosenModels)
+  
 
     // const provider = this.getProvider()
     const provider = this._provider

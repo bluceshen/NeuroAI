@@ -33,8 +33,9 @@ export interface TwinnyProvider {
   type: string
 }
 
-export type Providers = Record<string, TwinnyProvider> | undefined
-
+type Providers = Record<string, TwinnyProvider> | undefined
+// 定义 chosenModels 的类型
+type ChosenModels = string[];
 export class ProviderManager {
   _context: ExtensionContext
   _webView: Webview
@@ -50,11 +51,15 @@ export class ProviderManager {
     this._webView?.onDidReceiveMessage(
       (message: ClientMessage<TwinnyProvider>) => {
         this.handleMessage(message)
-      }
+        console.log("provider manager received message", message)
+      },
+
+
     )
   }
+ 
 
-  handleMessage(message: ClientMessage<TwinnyProvider|TwinnyProvider[]>) {
+  handleMessage(message: ClientMessage<TwinnyProvider &  { key?: string; data?: ChosenModels } >) {
     const { data: provider } = message
     switch (message.type) {
       case PROVIDER_EVENT_NAME.addProvider:
@@ -87,7 +92,13 @@ export class ProviderManager {
       case PROVIDER_EVENT_NAME.getAllProviders:
         return this.getAllProviders()
       case PROVIDER_EVENT_NAME.resetProvidersToDefaults:
-        return this.resetProvidersToDefaults()  // --
+        return this.resetProvidersToDefaults()
+      case 'twinny-set-global-context':
+        if(message.key=="twinny.chosenModels"){
+          this._context.globalState.update(message.key, message.data)
+        }
+        console.log("chosen models", this._context.globalState.get("twinny.chosenModels"))
+        console.log("selected model", this._context.globalState.get(`${EVENT_NAME.twinnyGlobalContext}-${GLOBAL_STORAGE_KEY.selectedModel}`))
     }
   }
 
@@ -236,6 +247,8 @@ export class ProviderManager {
     })
     return provider
   }
+
+
 
   // 修改返回类型为Providers
   getActiveFimProvider() {
