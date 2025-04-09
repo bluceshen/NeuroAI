@@ -3,7 +3,8 @@ import * as vscode from "vscode"
 import {
   ACTIVE_CHAT_PROVIDER_STORAGE_KEY,
   ACTIVE_EMBEDDINGS_PROVIDER_STORAGE_KEY,
-  ACTIVE_FIM_PROVIDER_STORAGE_KEY
+  ACTIVE_FIM_PROVIDER_STORAGE_KEY,
+  GLOBAL_STORAGE_KEY
 } from "../../common/constants"
 
 import { TwinnyProvider } from "../serve_func/provider-manager"
@@ -46,6 +47,13 @@ export class Base {
       ACTIVE_CHAT_PROVIDER_STORAGE_KEY
     )
     return provider
+  }
+
+  public getProviderChosenModels=() => {
+    const providers = this.context?.globalState.get<TwinnyProvider[]>(
+      GLOBAL_STORAGE_KEY.chosenModels
+    )
+    return providers
   }
 
   public getEmbeddingProvider = () => {

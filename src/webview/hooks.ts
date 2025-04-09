@@ -366,6 +366,12 @@ export const useProviders = () => {
     } as ClientMessage<TwinnyProvider>)
   }
 
+  const getActiveChatProvider = () => {
+    global.vscode.postMessage({
+      type: PROVIDER_EVENT_NAME.getActiveChatProvider
+    })as ClientMessage<TwinnyProvider>
+  }
+
   const getProvidersByType = (type: string) => {
     return Object.values(providers).filter(
       (provider) => provider.type === type
@@ -395,6 +401,8 @@ export const useProviders = () => {
     return () => window.removeEventListener("message", handler)
   }, [])
 
+
+
   return {
     chatProvider,
     copyProvider,
@@ -408,7 +416,8 @@ export const useProviders = () => {
     setActiveChatProvider,
     setActiveEmbeddingsProvider,
     setActiveFimProvider,
-    updateProvider
+    updateProvider,
+    getActiveChatProvider
   }
 }
 
@@ -795,7 +804,7 @@ export const useSymmetryConnection = () => {
       connectAsProvider()
     }
   }, [autoConnectProviderContext, symmetryProviderStatus, connectAsProvider])
-
+  
   return {
     autoConnectProviderContext,
     connectAsProvider,

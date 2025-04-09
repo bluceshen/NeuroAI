@@ -460,7 +460,6 @@ export const Chat = (props: ChatProps): JSX.Element => {
       generatingRef
     ]
   )
-
   return (
     <VSCodePanelView>
       <div className={styles.container}>

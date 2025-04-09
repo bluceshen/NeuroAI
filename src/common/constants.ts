@@ -184,7 +184,8 @@ export const INFERENCE_PROVIDERS_STORAGE_KEY = "twinny.inference-providers"
 
 export const GLOBAL_STORAGE_KEY = {
   autoConnectSymmetryProvider: "twinny.autoConnectSymmetryProvider",
-  selectedModel: "twinny.selectedModel"
+  selectedModel: "twinny.selectedModel",
+  chosenModels: "twinny.chosenModels",
 }
 
 export const WORKSPACE_STORAGE_KEY = {
