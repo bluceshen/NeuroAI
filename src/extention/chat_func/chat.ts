@@ -82,6 +82,7 @@ export class Chat extends Base {
   private _webView?: Webview
   private _isCancelled = false
   private _fileHandler: FileHandler
+  private _provider: TwinnyProvider
 
   constructor(
     statusBar: StatusBarItem,
@@ -90,7 +91,8 @@ export class Chat extends Base {
     webView: Webview,
     db: EmbeddingDatabase | undefined,
     sessionManager: SessionManager | undefined,
-    symmetryService: SymmetryService
+    symmetryService: SymmetryService,
+    provider: TwinnyProvider
   ) {
     super(extensionContext)
     this._webView = webView
@@ -101,6 +103,7 @@ export class Chat extends Base {
     this._sessionManager = sessionManager
     this._symmetryService = symmetryService
     this._fileHandler = new FileHandler(webView)
+    this._provider = provider
     this.setupSymmetryListeners()
   }
 
@@ -691,7 +694,8 @@ export class Chat extends Base {
       ? `${prompt}\n\nAdditional Context:\n${ragContext}`
       : prompt
 
-    const provider = this.getProvider()
+    // const provider = this.getProvider()
+    const provider = this._provider
     if (!provider) return []
 
     this._conversation.push({
@@ -715,7 +719,8 @@ export class Chat extends Base {
     // Debug log to track the conversation ID being received
     console.log("Received completion request with conversation ID:", conversationId)
 
-    const provider = this.getProvider()
+    // const provider = this.getProvider()
+    const provider = this._provider
 
     if (!provider) return
 
@@ -744,7 +749,8 @@ export class Chat extends Base {
       context,
       skipMessage
     )
-    const provider = this.getProvider()
+    // const provider = this.getProvider()
+    const provider = this._provider
     if (!provider) return []
 
     this.instantiateTokenJS(provider)

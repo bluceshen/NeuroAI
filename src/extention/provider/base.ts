@@ -89,6 +89,8 @@ export class BaseProvider {
       this.context
     )
 
+    
+
     this.chat = new Chat(
       this._statusBarItem,
       this._templateDir,
@@ -107,8 +109,6 @@ export class BaseProvider {
     this.reviewService = new ReviewService(
       this.context,
       this.webView,
-      this._sessionManager,
-      this._symmetryService,
       this._templateDir
     )
 
