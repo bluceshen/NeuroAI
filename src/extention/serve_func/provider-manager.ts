@@ -97,6 +97,9 @@ export class ProviderManager {
         if(message.key=="twinny.chosenModels"){
           this._context.globalState.update(message.key, message.data)
         }
+
+        // const providers =  this._context.globalState.get(`${EVENT_NAME.twinnyGlobalContext}-${GLOBAL_STORAGE_KEY.selectedModel}`)
+
         console.log("chosen models", this._context.globalState.get("twinny.chosenModels"))
         console.log("selected model", this._context.globalState.get(`${EVENT_NAME.twinnyGlobalContext}-${GLOBAL_STORAGE_KEY.selectedModel}`))
     }

@@ -75,6 +75,9 @@ export const Chat = (props: ChatProps): JSX.Element => {
     }
 
     setMessages((prev) => {
+
+      console.log("messages,", message)
+
       if (message.data.id) {
         const existingIndex = prev?.findIndex((m) => m.id === message.data.id)
 
@@ -121,6 +124,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     const message: ServerMessage = event.data
     switch (message.type) {
       case EVENT_NAME.twinnyAddMessage: {
+        console.log("messages11,", message)
         handleAddMessage(message as ServerMessage<ChatCompletionMessage>)
         break
       }
@@ -342,8 +346,11 @@ export const Chat = (props: ChatProps): JSX.Element => {
   }, [])
 
   useEffect(() => {
+
     window.addEventListener("message", messageEventHandler)
     editorRef.current?.commands.focus()
+ 
+    // 处理消息的逻辑
     return () => {
       window.removeEventListener("message", messageEventHandler)
     }

@@ -9,7 +9,8 @@ import {
   SYMMETRY_EMITTER_KEY,
   SYSTEM,
   TWINNY_COMMAND_NAME,
-  WORKSPACE_STORAGE_KEY
+  WORKSPACE_STORAGE_KEY,
+  GLOBAL_STORAGE_KEY
 } from "../../common/constants"
 import { logger } from "../../common/logger"
 import {
@@ -52,7 +53,7 @@ export class BaseProvider {
   private _symmetryService?: SymmetryService
   private _templateDir: string | undefined
   private _templateProvider: TemplateProvider
-  public chat: Chat | undefined
+  public chat: Chat[] | undefined
   public context: vscode.ExtensionContext
   public conversationHistory: ConversationHistory | undefined
   public reviewService: ReviewService | undefined
@@ -81,6 +82,43 @@ export class BaseProvider {
     this.registerEventListeners()
   }
 
+  // 改变chat数组，能做到当choseModel改变时，自动更新chat
+  private changeChatArray() {
+    if (!this.webView || !this._symmetryService) return
+
+    // 获取providers数组
+    const providers: TwinnyProvider[] | undefined = this.context.globalState.get("twinny.chosenModels")
+    // 将chat重置为未定义
+    this.chat = undefined
+    if (!providers) return
+    // 将chat重置为空数组
+    this.chat = []
+    // 遍历 providers 数组并创建 Chat 实例
+    // 将对象的键提取为数组
+    const providerKeys = Object.keys(providers);
+
+    // 使用for循环遍历每个provider
+    for (const key in providers) {
+      if (providers.hasOwnProperty(key)) {
+        // 创建一个新的Chat实例并添加到chat列表中
+        this.chat.push(new Chat(
+          this._statusBarItem,
+          this._templateDir,
+          this.context,
+          this.webView,
+          this._embeddingDatabase,
+          this._sessionManager,
+          this._symmetryService,
+          providers[key],
+        ));
+      }
+    }
+
+    // 判断当前的chat是否可用
+    if (!this.chat || this.chat.length < 1) return false;
+    return true;
+  }
+
   private initializeServices() {
     if (!this.webView) return
     this._symmetryService = new SymmetryService(
@@ -89,22 +127,12 @@ export class BaseProvider {
       this.context
     )
 
-    
-
-    this.chat = new Chat(
-      this._statusBarItem,
-      this._templateDir,
-      this.context,
-      this.webView,
-      this._embeddingDatabase,
-      this._sessionManager,
-      this._symmetryService
-    )
-
     this.conversationHistory = new ConversationHistory(
       this.context,
       this.webView,
     )
+
+    this.changeChatArray();
 
     this.reviewService = new ReviewService(
       this.context,
@@ -213,7 +241,17 @@ export class BaseProvider {
   }
 
   public destroyStream = () => {
-    this.chat?.abort()
+
+    this.changeChatArray();
+
+    // 首先chat不能时未定义状态
+    if (this.chat) {
+      // 遍历chat，让它每一个都停止
+      for (let i = 0; i < this.chat?.length; i++) {
+        this.chat[i]?.abort()
+      }
+    }
+
     this.reviewService?.abort()
     this.webView?.postMessage({
       type: EVENT_NAME.twinnyStopGeneration
@@ -221,23 +259,29 @@ export class BaseProvider {
   }
 
   public async streamTemplateCompletion(template: string) {
-    const symmetryConnected = this._sessionManager?.get(
-      EXTENSION_SESSION_NAME.twinnySymmetryConnection
-    )
-    if (symmetryConnected && this.chat) {
-      const messages = await this.chat.getTemplateMessages(template)
-      logger.log(`
-        Using symmetry for inference
-        Messages: ${JSON.stringify(messages)}
-      `)
-      return this._symmetryService?.write(
-        createSymmetryMessage<InferenceRequest>(serverMessageKeys.inference, {
-          messages,
-          key: SYMMETRY_EMITTER_KEY.inference
-        })
-      )
+    // 首先chat不能时未定义状态
+    if (this.chat) {
+      // 遍历chat，让它每一个都停止
+      for (let i = 0; i < this.chat?.length; i++) {
+        const symmetryConnected = this._sessionManager?.get(
+          EXTENSION_SESSION_NAME.twinnySymmetryConnection
+        )
+        if (symmetryConnected && this.chat) {
+          const messages = await this.chat[i].getTemplateMessages(template)
+          logger.log(`
+            Using symmetry for inference
+            Messages: ${JSON.stringify(messages)}
+          `)
+          return this._symmetryService?.write(
+            createSymmetryMessage<InferenceRequest>(serverMessageKeys.inference, {
+              messages,
+              key: SYMMETRY_EMITTER_KEY.inference
+            })
+          )
+        }
+        this.chat[i]?.templateCompletion(template)
+      }
     }
-    this.chat?.templateCompletion(template)
   }
 
   addFileToContext = (file: ContextFile) => {
@@ -420,11 +464,18 @@ export class BaseProvider {
       )
     }
 
-    this.chat?.completion(
-      data.data || [],
-      data.meta as FileContextItem[],
-      data.key // Pass the conversation ID
-    )
+
+    // 首先chat不能时未定义状态
+    if (this.changeChatArray() && this.chat) {
+      // 遍历chat，让它每一个都停止
+      for (let i = 0; i < this.chat?.length; i++) {
+        this.chat[i]?.completion(
+          data.data || [],
+          data.meta as FileContextItem[],
+          data.key // Pass the conversation ID
+        )
+      }
+    }
   }
 
   private getSelectedText = () => {
