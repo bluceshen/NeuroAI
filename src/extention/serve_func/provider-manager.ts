@@ -59,7 +59,7 @@ export class ProviderManager {
   }
  
 
-  handleMessage(message: ClientMessage<TwinnyProvider &  { key?: string; data?: ChosenModels } >) {
+  handleMessage(message: ClientMessage<TwinnyProvider &  { key?: string; data?: ChosenModels }| TwinnyProvider[]>) {
     const { data: provider } = message
     switch (message.type) {
       case PROVIDER_EVENT_NAME.addProvider:
