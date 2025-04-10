@@ -241,11 +241,8 @@ export class BaseProvider {
   }
 
   public destroyStream = () => {
-
-    this.changeChatArray();
-
     // 首先chat不能时未定义状态
-    if (this.chat) {
+    if (this.changeChatArray() && this.chat) {
       // 遍历chat，让它每一个都停止
       for (let i = 0; i < this.chat?.length; i++) {
         this.chat[i]?.abort()

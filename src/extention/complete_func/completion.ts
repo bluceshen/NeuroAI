@@ -195,6 +195,7 @@ export class CompletionProvider
       return
     }
 
+    this._finalResults = []
     // 遍历提供者并尝试从缓存中获取补全项
     if (this.config.completionCacheEnabled) {
       this.getProviderCompletionLast();
@@ -206,15 +207,15 @@ export class CompletionProvider
     }
 
     // 如果未启用，没有编辑器，或者应该跳过补全，或者字符串中间，则返回
-    if (
-      !this.config.enabled ||
-      !editor ||
-      getShouldSkipCompletion(context, this.config.autoSuggestEnabled) ||
-      getIsMiddleOfString()
-    ) {
-      this._statusBar.text = "$(code)"
-      return
-    }
+    // if (
+    //   !this.config.enabled ||
+    //   !editor ||
+    //   getShouldSkipCompletion(context, this.config.autoSuggestEnabled) ||
+    //   getIsMiddleOfString()
+    // ) {
+    //   this._statusBar.text = "$(code)"
+    //   return
+    // }
 
     this._chunkCount = 0
     this._document = document
@@ -233,7 +234,7 @@ export class CompletionProvider
 
     const results = await this.getResult();
 
-    this._finalResults.concat(results)
+    this._finalResults = this._finalResults.concat(results)
     return new InlineCompletionList(this._finalResults); // 自动处理空数组情况
   }
 

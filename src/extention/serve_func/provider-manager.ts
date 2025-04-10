@@ -33,7 +33,7 @@ export interface TwinnyProvider {
   type: string
 }
 
-type Providers = Record<string, TwinnyProvider> | undefined
+export type Providers = Record<string, TwinnyProvider> | undefined
 // 定义 chosenModels 的类型
 type ChosenModels = string[];
 export class ProviderManager {
