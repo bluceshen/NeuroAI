@@ -1,0 +1,5 @@
+/* Time of publishing: 10.07.2021, 16:54:38 */
+f
+function f(a) {
+    return a;
+}var x = f(1);

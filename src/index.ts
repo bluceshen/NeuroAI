@@ -124,7 +124,7 @@ export async function activate(context: ExtensionContext) {
       }
     ),
     commands.registerCommand(TWINNY_COMMAND_NAME.stopGeneration, () => {
-      completionProvider.onError()
+      completionProvider.onError(null)
       sidebarProvider.destroyStream()
     }),
     commands.registerCommand(TWINNY_COMMAND_NAME.manageProviders, async () => {
@@ -246,7 +246,8 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand(TWINNY_COMMAND_NAME.newConversation, () => {
       sidebarProvider.conversationHistory?.resetConversation()
-      sidebarProvider.chat?.resetConversation()
+      if(sidebarProvider.chat && sidebarProvider.chat.length>0)
+      sidebarProvider.chat[0].resetConversation()
       sidebarProvider.newSymmetryConversation()
       sidebarProvider.webView?.postMessage({
         type: EVENT_NAME.twinnyNewConversation

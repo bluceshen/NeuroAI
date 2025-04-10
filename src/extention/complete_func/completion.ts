@@ -67,6 +67,7 @@ import {
   getShouldSkipCompletion,
   getLineBreakCount
 } from "../public/utils"
+import * as vscode from "vscode";
 
 // 新增接口，管理局部状态
 interface LocalState {
@@ -102,7 +103,11 @@ export class CompletionProvider
   private _usingFimTemplate = false
   private _finalResults: InlineCompletionItem[] = []
   public lastCompletionText = ""
-
+  // 新增：模型优先级管理
+  private modelPriorities: Record<string, number> = {}; // 记录每个模型的优先级
+  private selectedModel: string | null = null; // 当前选中的模型
+  private completionModelMap: Map<string | vscode.SnippetString, string> = new Map(); // 补全文本到模型名称的映射
+  private quickPick: vscode.QuickPick<vscode.QuickPickItem> | null = null; // 悬浮条
 
   constructor(
     statusBar: StatusBarItem,
@@ -118,6 +123,49 @@ export class CompletionProvider
     this._statusBar = statusBar
     this._fileInteractionCache = fileInteractionCache
     this._templateProvider = templateProvider
+
+     // 初始化模型优先级
+    this.modelPriorities = {};
+    this.selectedModel = null;
+    this.quickPick = null
+
+    // 注册命令
+    context.subscriptions.push(
+      vscode.commands.registerCommand("twinny.selectPreviousModel", () => {
+        this.selectPreviousModel();
+      })
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("twinny.selectNextModel", () => {
+        this.selectNextModel();
+      })
+    );
+
+    context.subscriptions.push(
+      vscode.commands.registerCommand("twinny.showCompletionQuickPick", () => {
+        this.showCompletionQuickPick();
+      })
+    );
+
+    // 监听 Tab 键接受补全
+    context.subscriptions.push(
+      vscode.window.onDidChangeTextEditorSelection((e) => {
+        if (e.textEditor.selections.length > 0 && e.textEditor.selections[0].isEmpty) {
+          const position = e.textEditor.selections[0].active;
+          const document = e.textEditor.document;
+          const lineText = document.lineAt(position).text;
+          const isTabPressed = lineText.startsWith("\t");
+
+          if (isTabPressed && this.selectedModel) {
+            // 提升选中模型的优先级
+            this.modelPriorities[this.selectedModel] = (this.modelPriorities[this.selectedModel] || 0) + 1;
+          }
+        }
+      })
+    );
+
+    // this._abortController = new AbortController()
   }
 
   private buildFimRequest(prompt: string, provider: TwinnyProvider) {
@@ -166,6 +214,99 @@ export class CompletionProvider
     });
 
 
+  }
+
+  // 切换到上一个模型
+  private selectPreviousModel() {
+    if (this._finalResults.length === 0) return;
+
+    const currentText = this._finalResults.find(item => this.completionModelMap.get(item.insertText) === this.selectedModel)?.insertText;
+    const currentIndex = this._finalResults.findIndex(item => item.insertText === currentText);
+    if (currentIndex > 0) {
+      const newText = this._finalResults[currentIndex - 1].insertText;
+      this.selectedModel = this.completionModelMap.get(newText) || null;
+      this.updateStatusBar();
+    }
+  }
+
+  // 切换到下一个模型
+  private selectNextModel() {
+    if (this._finalResults.length === 0) return;
+
+    const currentText = this._finalResults.find(item => this.completionModelMap.get(item.insertText) === this.selectedModel)?.insertText;
+    const currentIndex = this._finalResults.findIndex(item => item.insertText === currentText);
+    if (
+      currentIndex >= 0 &&
+      currentIndex < this._finalResults.length - 1
+    ) {
+      const newText = this._finalResults[currentIndex + 1].insertText;
+      this.selectedModel = this.completionModelMap.get(newText) || null;
+      this.updateStatusBar();
+    }
+  }
+
+  // 更新状态栏显示
+  private updateStatusBar() {
+    if (this.selectedModel) {
+      this._statusBar.text = `$(code) Model: ${this.selectedModel}`;
+    } else {
+      this._statusBar.text = "$(code)";
+    }
+  }
+
+  // 显示补全悬浮条
+  private showCompletionQuickPick() {
+    if (!this._finalResults || this._finalResults.length === 0) return;
+
+    if (!this.quickPick) {
+      this.quickPick = vscode.window.createQuickPick();
+      this.quickPick.title = "Select Completion Model";
+      this.quickPick.placeholder = "Select a model to insert its completion";
+      this.quickPick.ignoreFocusOut = true;
+      this.quickPick.onDidChangeSelection((selection) => {
+        if (selection.length > 0) {
+          const selectedItem = selection[0];
+          this.selectedModel = selectedItem.label;
+          this.updateStatusBar();
+          const completionText = Array.from(this.completionModelMap.keys()).find(key => this.completionModelMap.get(key) === selectedItem.label);
+          if (completionText) {
+            this.insertSelectedCompletion(completionText);
+          }
+        }
+      });
+    }
+
+    // 将模型名称作为 QuickPickItem 的 label
+    const uniqueModels = new Set<string>();
+    const quickPickItems = this._finalResults.map(item => {
+      const model = this.completionModelMap.get(item.insertText) || "";
+      if (!uniqueModels.has(model)) {
+        uniqueModels.add(model);
+        return {
+          label: model,
+          description: item.insertText
+        };
+      }
+      return null;
+    }).filter(item => item !== null) as vscode.QuickPickItem[];
+
+    // 设置补全项
+    this.quickPick.items = quickPickItems;
+    this.quickPick.activeItems = quickPickItems.length > 0 ? [quickPickItems[0]] : [];
+    this.quickPick.show();
+  }
+
+  // 插入选中的补全项
+  private insertSelectedCompletion(completionText: string | vscode.SnippetString) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return;
+
+    if (typeof completionText === "string") {
+      editor.insertSnippet(new vscode.SnippetString(completionText));
+    } else {
+      editor.insertSnippet(completionText);
+    }
+    this.quickPick?.hide();
   }
 
   public async provideInlineCompletionItems(
@@ -234,7 +375,22 @@ export class CompletionProvider
 
     const results = await this.getResult();
 
-    this._finalResults = this._finalResults.concat(results)
+    // this._finalResults.concat(results)
+    this._finalResults = this._finalResults.concat(results);
+
+    // 根据模型优先级排序补全结果
+    this._finalResults.sort((a, b) => {
+      const modelA = this.completionModelMap.get(a.insertText) || "";
+      const modelB = this.completionModelMap.get(b.insertText) || "";
+      return (this.modelPriorities[modelB] || 0) - (this.modelPriorities[modelA] || 0);
+    });
+
+    // 更新状态栏显示第一个结果的模型
+    if (this._finalResults.length > 0) {
+      this.selectedModel = this.completionModelMap.get(this._finalResults[0].insertText) || null;
+      this.updateStatusBar();
+    }
+
     return new InlineCompletionList(this._finalResults); // 自动处理空数组情况
   }
 
@@ -532,7 +688,8 @@ export class CompletionProvider
     return pairs[open] === close;
   }
 
-  public onError = (localState: LocalState) => {
+  public onError = (localState: LocalState|null) => {
+    if(!localState) return
     localState.abortController?.abort()
   }
 
@@ -816,9 +973,15 @@ export class CompletionProvider
     this.lastCompletionText = formattedCompletion
     this._lastCompletionMultiline = getLineBreakCount(formattedCompletion) > 1;
 
-    return new InlineCompletionItem(
+    // 创建补全项
+    const completionItem = new vscode.InlineCompletionItem(
       formattedCompletion,
-      new Range(this._position, this._position)
+      new vscode.Range(this._position, this._position)
     );
+
+    // 将模型名称与补全文本关联
+    this.completionModelMap.set(formattedCompletion, provider.modelName);
+
+    return completionItem;
   }
 }

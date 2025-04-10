@@ -110,6 +110,7 @@ export interface GithubPullRequestMessage {
 
 export type ChatCompletionMessage = ChatCompletionMessageParam & {
   id?: string
+  modelName?: string // my add ziduan
 }
 
 export type CompletionStreamingWithId = CompletionStreaming<LLMProvider> & {

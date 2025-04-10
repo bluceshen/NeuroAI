@@ -116,7 +116,8 @@ export class Chat extends Base {
           type: EVENT_NAME.twinnyOnCompletion,
           data: {
             content: completion.trimStart(),
-            role: ASSISTANT
+            role: ASSISTANT,
+            modelName: this._provider.modelName
           }
         } as ServerMessage<ChatCompletionMessage>)
       }
@@ -277,7 +278,8 @@ export class Chat extends Base {
           type: EVENT_NAME.twinnyOnCompletion,
           data: {
             content: this._completion.trimStart() || " ",
-            role: ASSISTANT
+            role: ASSISTANT,
+            modelName: this._provider.modelName
           }
         } as ServerMessage<ChatCompletionMessage>)
       }
@@ -339,7 +341,8 @@ export class Chat extends Base {
         type: EVENT_NAME.twinnyAddMessage,
         data: {
           content: result.choices[0].message.content,
-          role: ASSISTANT
+          role: ASSISTANT,
+          modelName: this._provider.modelName
         }
       } as ServerMessage<ChatCompletionMessage>)
     } catch (error) {
@@ -352,7 +355,8 @@ export class Chat extends Base {
         type: EVENT_NAME.twinnyAddMessage,
         data: {
           content: error instanceof Error ? error.message : String(error),
-          role: ASSISTANT
+          role: ASSISTANT,
+          modelName: this._provider.modelName
         }
       } as ServerMessage<ChatCompletionMessage>)
     }
@@ -384,7 +388,8 @@ export class Chat extends Base {
         type: EVENT_NAME.twinnyAddMessage,
         data: {
           content: this._completion.trim(),
-          role: ASSISTANT
+          role: ASSISTANT,
+          modelName: this._provider.modelName
         }
       } as ServerMessage<ChatCompletionMessage>)
 
@@ -403,7 +408,8 @@ export class Chat extends Base {
         type: EVENT_NAME.twinnyAddMessage,
         data: {
           content: error instanceof Error ? error.message : String(error),
-          role: ASSISTANT
+          role: ASSISTANT,
+          modelName: this._provider.modelName
         }
       } as ServerMessage<ChatCompletionMessage>)
     }
@@ -682,7 +688,8 @@ export class Chat extends Base {
         data: {
           content:
             (kebabToSentence(template) + "\n\n" + "```\n" + selection).trim() ||
-            " "
+            " ",
+          modelName: this._provider.modelName
         }
       } as ServerMessage<ChatCompletionMessage>)
     }
