@@ -14,7 +14,7 @@ import * as cheerio from "cheerio"
 import DOMPurify from "dompurify"
 import { v4 as uuidv4 } from "uuid"
 
-import { EVENT_NAME, USER } from "../common/constants"
+import { EVENT_NAME, GLOBAL_STORAGE_KEY, USER } from "../common/constants"
 import {
   ChatCompletionMessage,
   ClientMessage,
@@ -195,10 +195,14 @@ export const Chat = (props: ChatProps): JSX.Element => {
     setMessages((prev) => {
       if (!prev || prev.length === 0) return prev
       if (prev.length === 2) return prev
-
+      let endIndex=index+1
+      while(endIndex<prev.length&&prev[endIndex].role==="assistant"){
+        endIndex++
+      }
+      endIndex--
       const updatedMessages = [
         ...prev.slice(0, index),
-        ...prev.slice(index + 2)
+        ...prev.slice(endIndex + 1)
       ]
 
       saveLastConversation({
