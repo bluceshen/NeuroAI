@@ -260,6 +260,14 @@
         "key": "CTRL+SHIFT+/",
         "command": "twinny.stopGeneration",
         "when": "twinnyGeneratingText"
+      },{
+        "key" : "CTRL+SHIFT+E",
+        "command" : "twinny.explain",
+        "when" : "editorTextFocus"
+      },{
+        "key":"CTRL+SHIFT+T",
+        "command":"twinny.addTests",
+        "when":"editorTextFocus"
       }
     ],
     "viewsContainers": {
