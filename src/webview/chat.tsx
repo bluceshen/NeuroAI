@@ -38,6 +38,9 @@ import { CustomKeyMap } from "./utils"
 
 import styles from "./styles/index.module.css"
 
+import { EmbeddingDatabase } from "../extention/embeding_func/embeddings"
+import { vsCodeBadge } from "@vscode/webview-ui-toolkit"
+
 interface ChatProps {
   fullScreen?: boolean
 }
@@ -65,6 +68,11 @@ export const Chat = (props: ChatProps): JSX.Element => {
     useConversationHistory()
 
   const chatRef = useRef<HTMLTextAreaElement>(null)
+  // RAG复选按钮的状态
+  const [isRAGEnabled, setIsRAGEnabled] = useState(false);
+  // embedingDataBase对象
+  // TODO
+  const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
 
   const handleAddMessage = (message: ServerMessage<ChatCompletionMessage>) => {
     if (!message.data) {
@@ -268,7 +276,20 @@ export const Chat = (props: ChatProps): JSX.Element => {
     editorRef.current?.commands.clearContent()
   }, [])
 
-  const handleSubmitForm = useCallback(() => {
+  // 在Chat.tsx中添加一个函数来模拟网络爬虫操作
+  const fetchDataFromWeb = async (query: string): Promise<string[]> => {
+    // 实际爬虫逻辑
+    // TODO
+
+    // 模拟网络请求延迟
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log("Fetching web data for query:", query);
+    
+    // 返回模拟的Web数据数组
+    return [`Web data 1 for: ${query}`, `Web data 2 for: ${query}`];
+  };
+
+  const handleSubmitForm = useCallback(async () => {
     const input = editorRef.current
       ?.getHTML()
       .replace(/<p>/g, "")
@@ -292,6 +313,24 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     const conversationId = conversation?.id || uuidv4();
 
+    let webData: string[] = []; // 用于存储爬虫获取的数据
+
+  // 如果RAG复选框被选中，则执行爬虫操作
+    if (isRAGEnabled) {
+      try {
+        webData = await fetchDataFromWeb(text); // 调用爬虫函数
+        console.log("Fetched web data:", webData);
+
+        // 假设你已经有了一个EmbeddingDatabase实例：embeddingDB
+        await embeddingDB.injestWebDocuments(webData, "/path/to/directory"); 
+        await embeddingDB.populateWebDatabase();
+      } catch (error) {
+        console.error("Error fetching or embedding web data:", error);
+        // 可以选择是否在爬虫失败或嵌入失败时继续发送消息
+        // 如果需要取消发送，可以在此处 return;
+      }
+    }
+
     setMessages((prevMessages) => {
       const updatedMessages: ChatCompletionMessage[] = [
         ...(prevMessages || []),
@@ -305,11 +344,15 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
       const clientMessage: ClientMessage<
         ChatCompletionMessage[],
-        MentionType[]
+        { mentions: MentionType[]; ragEnabled: boolean; webData: string[] }
       > = {
         type: EVENT_NAME.twinnyChatMessage,
         data: updatedMessages,
-        meta: mentions,
+        meta: {
+          mentions,
+          ragEnabled: isRAGEnabled, // 添加RAG状态
+          webData // 将爬虫数据包含在meta中
+        },
         key: conversationId // Pass the conversation ID as the key
       }
 
@@ -321,7 +364,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
       return updatedMessages
     })
   }, [
-    conversation?.id
+    conversation?.id, isRAGEnabled // 添加isRAGEnabled到依赖项
   ])
 
   const handleNewConversation = useCallback(() => {
@@ -550,16 +593,25 @@ export const Chat = (props: ChatProps): JSX.Element => {
         </div>
         <form>
           <div className={styles.chatBox}>
-            <EditorContent
-              className={styles.tiptap}
-              editor={editorRef.current}
-            />
-            <div
-              role="button"
-              onClick={handleSubmitForm}
-              className={styles.chatSubmit}
-            >
-              <span className="codicon codicon-send"></span>
+            <EditorContent className={styles.tiptap} editor={editorRef.current} />
+            <div className={styles.chatOptions}>
+              <div className={styles.ragCheckbox}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isRAGEnabled}
+                    onChange={(e) => setIsRAGEnabled(e.target.checked)}
+                  />
+                  RAG
+                </label>
+              </div>
+              <div
+                role="button"
+                onClick={handleSubmitForm}
+                className={styles.chatSubmit}
+              >
+                <span className="codicon codicon-send"></span>
+              </div>
             </div>
           </div>
         </form>
