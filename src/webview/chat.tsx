@@ -37,6 +37,7 @@ import { Suggestions } from "./suggestions"
 import { CustomKeyMap } from "./utils"
 
 import styles from "./styles/index.module.css"
+import { crawler } from "./crawler"
 
 interface ChatProps {
   fullScreen?: boolean
@@ -114,7 +115,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     message: ServerMessage<ChatCompletionMessage>
   ) => {
     setCompletion(message.data)
-    generatingRef.current=true
+    generatingRef.current = true
   }
 
   const handleLoadingMessage = () => {
@@ -196,8 +197,8 @@ export const Chat = (props: ChatProps): JSX.Element => {
     setMessages((prev) => {
       if (!prev || prev.length === 0) return prev
       if (prev.length === 2) return prev
-      let endIndex=index+1
-      while(endIndex<prev.length&&prev[endIndex].role==="assistant"){
+      let endIndex = index + 1
+      while (endIndex < prev.length && prev[endIndex].role === "assistant") {
         endIndex++
       }
       endIndex--
@@ -269,6 +270,26 @@ export const Chat = (props: ChatProps): JSX.Element => {
     editorRef.current?.commands.clearContent()
   }, [])
 
+  // 在Chat.tsx中添加一个函数来模拟网络爬虫操作
+  const fetchDataFromWeb = async (query: string): Promise<string[]> => {
+    // 模拟网络请求延迟
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log("Fetching web data for query:", query);
+
+    const data: Array<String> = await crawler.searchAndScrape(query) || [];
+    let retContent = [];
+    for (let i = 0; i < data.length; i++) {
+      retContent.push(`Web data 1 for: ${data[i]}`);
+    }
+
+    const longestThree = retContent
+      .sort((a, b) => b.length - a.length) // 按长度降序排序
+      .slice(0, 3); // 取前3条
+
+    // 返回模拟的Web数据数组
+    return longestThree;
+  };
+
   const handleSubmitForm = useCallback(() => {
     const input = editorRef.current
       ?.getHTML()
@@ -290,6 +311,20 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     setIsLoading(true)
     clearEditor()
+
+    let webData: string[] = []; // 用于存储爬虫获取的数据
+
+    // 如果RAG复选框被选中，则执行爬虫操作
+    if (isRAGEnabled) {
+      try {
+        // webData = fetchDataFromWeb(text); // 调用爬虫函数
+        console.log("Fetched web data:", webData);
+      } catch (error) {
+        console.error("Error fetching or embedding web data:", error);
+        // 可以选择是否在爬虫失败或嵌入失败时继续发送消息
+        // 如果需要取消发送，可以在此处 return;
+      }
+    }
 
     const conversationId = conversation?.id || uuidv4();
 
@@ -354,7 +389,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     window.addEventListener("message", messageEventHandler)
     editorRef.current?.commands.focus()
- 
+
     // 处理消息的逻辑
     return () => {
       window.removeEventListener("message", messageEventHandler)

@@ -12,7 +12,12 @@ vscode-text-field {
   width: 100%;
 }
 
-h1, h2, h3, h4, h5, h6 {
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
   font-weight: 600;
   line-height: 1.5;
 }
@@ -154,13 +159,17 @@ code {
 
 .message {
   font-size: 1rem;
-   line-height: 1.5;
-   padding: 12px 8px;
-   margin-right: 10px;
+  line-height: 1.5;
+  padding: 12px 8px;
+  margin-right: 10px;
 }
 
 .userMessage {
-  border-bottom: 1px solid var(--vscode-editorWidget-border);
+  color: aliceblue;
+  border-top: 2px solid #ccc;
+  /* 增加上边框，设置为更粗 */
+  background-color: #363434;
+  /* 设置背景色为浅黑色 */
 }
 
 .message-container {
@@ -212,7 +221,8 @@ code {
   overflow: hidden;
   transition: all 0.3s ease-out;
   opacity: 1;
-  max-height: 1000px; /* Large enough to contain content */
+  max-height: 1000px;
+  /* Large enough to contain content */
   margin-top: 8px;
 }
 
@@ -263,10 +273,13 @@ code {
 }
 
 @keyframes typingAnimation {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0);
     opacity: 0.6;
   }
+
   50% {
     transform: translateY(-3px);
     opacity: 0.8;
@@ -338,7 +351,7 @@ code {
   padding: 8px 0;
 }
 
-.chatOptions > div {
+.chatOptions>div {
   display: flex;
   gap: 6px;
   align-items: center;
@@ -454,7 +467,7 @@ code {
   width: 100%;
 }
 
-.embeddingOptions > div {
+.embeddingOptions>div {
   width: 100%;
 }
 
