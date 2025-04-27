@@ -261,7 +261,11 @@ export class EmbeddingDatabase extends Base {
   }
 
   // 新增：嵌入Web数据的方法
+<<<<<<< HEAD
   public async injestWebDocuments(webData: string[], _path:undefined|string): Promise<EmbeddingDatabase> {
+=======
+  public async injestWebDocuments(webData: string[], directoryPath: string): Promise<EmbeddingDatabase> {
+>>>>>>> 9be0b62f3ce99cbf4e8f26836b89cba07f72b672
     const totalFiles = webData.length;
     let processedFiles = 0;
 
@@ -330,4 +334,8 @@ export class EmbeddingDatabase extends Base {
       return undefined;
     }
   }
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> 9be0b62f3ce99cbf4e8f26836b89cba07f72b672

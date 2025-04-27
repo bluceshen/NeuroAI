@@ -72,7 +72,11 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const [isRAGEnabled, setIsRAGEnabled] = useState(false);
   // embedingDataBase对象
   // TODO
+<<<<<<< HEAD
   const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
+=======
+  // const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
+>>>>>>> 9be0b62f3ce99cbf4e8f26836b89cba07f72b672
 
   const handleAddMessage = (message: ServerMessage<ChatCompletionMessage>) => {
     if (!message.data) {
@@ -323,8 +327,13 @@ export const Chat = (props: ChatProps): JSX.Element => {
         console.log("Fetched web data:", webData);
 
         // 假设你已经有了一个EmbeddingDatabase实例：embeddingDB
+<<<<<<< HEAD
         await embeddingDB.injestWebDocuments(webData, "/path/to/directory"); 
         await embeddingDB.populateWebDatabase();
+=======
+        // await embeddingDB.injestWebDocuments(webData, "/path/to/directory"); 
+        // await embeddingDB.populateWebDatabase();
+>>>>>>> 9be0b62f3ce99cbf4e8f26836b89cba07f72b672
       } catch (error) {
         console.error("Error fetching or embedding web data:", error);
         // 可以选择是否在爬虫失败或嵌入失败时继续发送消息
