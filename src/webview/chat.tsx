@@ -60,7 +60,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const { symmetryConnection } = useSymmetryConnection()
   const { files, removeFile } = useFileContext()
   const [isBottom, setIsBottom] = useState(false)
-
+  const [isRAGEnabled, setRAGEnabled] = useState(false)
   const { conversation, saveLastConversation, setActiveConversation } =
     useConversationHistory()
 
@@ -114,6 +114,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     message: ServerMessage<ChatCompletionMessage>
   ) => {
     setCompletion(message.data)
+    generatingRef.current=true
   }
 
   const handleLoadingMessage = () => {
@@ -550,16 +551,25 @@ export const Chat = (props: ChatProps): JSX.Element => {
         </div>
         <form>
           <div className={styles.chatBox}>
-            <EditorContent
-              className={styles.tiptap}
-              editor={editorRef.current}
-            />
-            <div
-              role="button"
-              onClick={handleSubmitForm}
-              className={styles.chatSubmit}
-            >
-              <span className="codicon codicon-send"></span>
+            <EditorContent className={styles.tiptap} editor={editorRef.current} />
+            <div className={styles.chatOptions}>
+              <div className={styles.ragCheckbox}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isRAGEnabled}
+                    onChange={(e) => setRAGEnabled(e.target.checked)}
+                  />
+                  RAG
+                </label>
+              </div>
+              <div
+                role="button"
+                onClick={handleSubmitForm}
+                className={styles.chatSubmit}
+              >
+                <span className="codicon codicon-send"></span>
+              </div>
             </div>
           </div>
         </form>

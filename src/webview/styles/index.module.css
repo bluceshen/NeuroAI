@@ -153,12 +153,10 @@ code {
 }
 
 .message {
-
-  border: 1px solid #ccc; /* 统一边框样式 */
-  border-radius: 8px; /* 圆角 */
-  padding: 10px; /* 内边距 */
-  margin: 5px 0; /* 外边距 */
-  background-color: #fff; /* 统一的背景色 */
+  font-size: 1rem;
+   line-height: 1.5;
+   padding: 12px 8px;
+   margin-right: 10px;
 }
 
 .userMessage {
@@ -689,8 +687,4 @@ code {
   color: var(--vscode-dangerForeground);
   font-size: 12px;
   padding: 0 4px;
-}
-
-.VSCodePanelView {
-  border: 1px solid #ccc;
 }
