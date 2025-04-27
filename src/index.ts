@@ -30,6 +30,8 @@ import { TemplateProvider } from "./extention/public/template-provider"
 import { delayExecution } from "./extention/public/utils"
 import { getLineBreakCount } from "./extention/public/utils"
 
+import { ReviseView } from "./extention/revise/view"
+
 export async function activate(context: ExtensionContext) {
   setContext(context)
   const config = workspace.getConfiguration("twinny")
@@ -74,6 +76,26 @@ export async function activate(context: ExtensionContext) {
   )
 
   templateProvider.init()
+
+  // DEMO
+  // 右键代码重审
+  const reviseView = new ReviseView(context)
+  context.subscriptions.push(commands.registerCommand(
+    'ai.revise',
+    () => {
+      // 选中的代码
+      const selectedCode = vscode.window.activeTextEditor?.document.getText(
+        vscode.window.activeTextEditor.selection
+      )
+
+      // 代码的范围
+      const range = vscode.window.activeTextEditor?.selection;
+
+      if(selectedCode) {
+        reviseView.showPanel(selectedCode, range)
+      }
+    }
+  ))
 
   context.subscriptions.push(
     languages.registerInlineCompletionItemProvider(

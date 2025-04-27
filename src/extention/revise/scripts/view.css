@@ -1,0 +1,75 @@
+body {
+    color: var(--vscode-editor-foreground);
+    background: var(--vscode-editor-background);
+    padding: 20px;
+}
+
+.code-preview {
+    font-family: var(--vscode-editor-font-family);
+    font-size: var(--vscode-editor-font-size);
+    padding: 10px;
+    background: var(--vscode-editorWidget-background);
+    border: 1px solid var(--vscode-editorWidget-border);
+}
+
+.form-control {
+    margin: 10px 0;
+    width: 100%;
+}
+
+/* 添加面板层级管理 */
+.webview-panel {
+    z-index: 9999;
+    position: relative;
+}
+
+/* 保持按钮状态 */
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* 添加加载状态指示 */
+.loading-indicator {
+    display: none;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.code-section {
+    margin: 20px 0;
+    border: 1px solid var(--vscode-editorWidget-border);
+    border-radius: 4px;
+    padding: 15px;
+}
+
+.code-section h3 {
+    margin-top: 0;
+    color: var(--vscode-editor-foreground);
+}
+
+.generated-code .code-preview {
+    background: var(--vscode-diffEditor-insertedTextBackground);
+    border-color: var(--vscode-gitDecoration-untrackedResourceForeground);
+}
+
+.loader {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.status-indicator {
+    font-size: 0.9em;
+    margin-left: 10px;
+}
