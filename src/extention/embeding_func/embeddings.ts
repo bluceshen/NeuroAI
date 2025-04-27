@@ -27,6 +27,8 @@ export class EmbeddingDatabase extends Base {
   private _workspaceName = vscode.workspace.name || ""
   private _documentTableName = `${this._workspaceName}-documents`
   private _filePathTableName = `${this._workspaceName}-file-paths`
+  private _webDocuments: EmbeddedDocument[] = []; // 新增：存储Web数据的嵌入
+  private _webDocumentTableName = `${this._workspaceName}-web-documents`; // 新增：Web数据表名
 
   constructor(dbPath: string, context: vscode.ExtensionContext) {
     super(context)
@@ -256,5 +258,76 @@ export class EmbeddingDatabase extends Base {
     }
 
     return (response as Embedding).embeddings[0]
+  }
+
+  // 新增：嵌入Web数据的方法
+  public async injestWebDocuments(webData: string[], _path:undefined|string): Promise<EmbeddingDatabase> {
+    const totalFiles = webData.length;
+    let processedFiles = 0;
+
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: "Embedding Web Data",
+        cancellable: true,
+      },
+      async (progress) => {
+        if (!this.context) return;
+        const promises = webData.map(async (content) => {
+          const chunks = await getDocumentSplitChunks(content, `web-${processedFiles}`, this.context);
+
+          for (const chunk of chunks) {
+            const chunkEmbedding = await this.fetchModelEmbedding(chunk);
+            this._webDocuments.push({
+              content: chunk,
+              vector: chunkEmbedding,
+              file: `web-${processedFiles}`,
+            });
+          }
+
+          processedFiles++;
+          progress.report({
+            message: `${((processedFiles / totalFiles) * 100).toFixed(2)}%`,
+          });
+        });
+
+        await Promise.all(promises);
+
+        vscode.window.showInformationMessage(`Embedded Web Data successfully! Processed ${totalFiles} items.`);
+      }
+    );
+
+    return this;
+  }
+
+  // 新增：将Web数据写入数据库的方法
+  public async populateWebDatabase() {
+    try {
+      const tableNames = await this._db?.tableNames();
+      if (!tableNames?.includes(this._webDocumentTableName)) {
+        await this._db?.createTable(this._webDocumentTableName, this._webDocuments, {
+          mode: "overwrite",
+        });
+        return;
+      }
+
+      await this._db?.dropTable(this._webDocumentTableName);
+      await this.populateWebDatabase();
+
+      this._webDocuments.length = 0;
+    } catch (e) {
+      console.log("Error populating Web database", e);
+    }
+  }
+
+  // 新增：从数据库中检索Web数据的方法
+  public async getWebDocuments(vector: IntoVector, limit: number): Promise<EmbeddedDocument[] | undefined> {
+    try {
+      const table = await this._db?.openTable(this._webDocumentTableName);
+      const query = table?.vectorSearch(vector).limit(limit);
+      return query?.toArray();
+    } catch {
+      return undefined;
+    }
   }
 }
