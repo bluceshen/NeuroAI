@@ -70,11 +70,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const [isRAGEnabled, setIsRAGEnabled] = useState(false);
   // embedingDataBase对象
   // TODO
-<<<<<<< HEAD
-  const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
-=======
   // const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
->>>>>>> 9be0b62f3ce99cbf4e8f26836b89cba07f72b672
 
   const handleAddMessage = (message: ServerMessage<ChatCompletionMessage>) => {
     if (!message.data) {
