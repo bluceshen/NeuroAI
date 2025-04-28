@@ -61,6 +61,11 @@
     "menus": {
       "editor/context": [
         {
+          "command": "ai.revise",
+          "when": "editorHasSelection"
+        },
+
+        {
           "when": "editorTextFocus",
           "command": "twinny.explain"
         },
@@ -140,6 +145,11 @@
       ]
     },
     "commands": [
+      {
+        "command": "ai.revise",
+        "title": "Al Revise Code"
+      },
+
       {
         "command": "twinny.explain",
         "title": "Twinny - Explain"
@@ -260,14 +270,16 @@
         "key": "CTRL+SHIFT+/",
         "command": "twinny.stopGeneration",
         "when": "twinnyGeneratingText"
-      },{
-        "key" : "CTRL+SHIFT+E",
-        "command" : "twinny.explain",
-        "when" : "editorTextFocus"
-      },{
-        "key":"CTRL+SHIFT+T",
-        "command":"twinny.addTests",
-        "when":"editorTextFocus"
+      },
+      {
+        "key": "CTRL+SHIFT+E",
+        "command": "twinny.explain",
+        "when": "editorTextFocus"
+      },
+      {
+        "key": "CTRL+SHIFT+T",
+        "command": "twinny.addTests",
+        "when": "editorTextFocus"
       }
     ],
     "viewsContainers": {
@@ -477,7 +489,7 @@
     "@types/js-yaml": "^4.0.9",
     "@types/minimatch": "^5.1.2",
     "@types/mocha": "^10.0.6",
-    "@types/node": "^16.18.68",
+    "@types/node": "^16.18.126",
     "@types/react-dom": "^18.2.18",
     "@types/react-syntax-highlighter": "^15.5.11",
     "@types/string_score": "^0.1.31",
