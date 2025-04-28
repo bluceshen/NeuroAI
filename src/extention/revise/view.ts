@@ -18,7 +18,8 @@ export class ReviseView {
     // 显示面板
     public showPanel(
         selectedCode: string | undefined | null,
-        range: vscode.Range | undefined | null
+        range: vscode.Selection,
+        edit: vscode.TextEditor
     ) {
         if(selectedCode == null || selectedCode == undefined) {
             vscode.window.showErrorMessage("Please select code to revise.");
@@ -48,8 +49,9 @@ export class ReviseView {
                 case viewUtils.SIGN_NAME.reviseCodeEable:
                     this.handleRevisionRequest(panelID, message.data);
                     break;
-                case viewUtils.SIGN_NAME.updateGeneratedCode:
-                    this.updateGeneratedCode(range, message.data);
+                case viewUtils.SIGN_NAME.replaceOriginalCode:
+                    this.updateGeneratedCode(range, message.data, edit);
+                    break;
             }
         }, undefined, this.context.subscriptions)
 
@@ -76,7 +78,7 @@ export class ReviseView {
             vscode.Uri.joinPath(this.context.extensionUri, viewUtils.STYLE_URL, "view.js")
         );
 
-            // 安全策略
+        // 安全策略
         const csp = `
         <meta http-equiv="Content-Security-Policy" 
             content="default-src 'none';
@@ -136,6 +138,12 @@ export class ReviseView {
                     <pre id="generated-code-content">
                     </pre>
                 </div>
+
+                <div class="loading-indicator" style="display: none;">
+                    <div class="spinner"></div>
+                    <span>生成中...</span>
+                </div>
+
                 <div class="button-group">
                     <button id="replace-btn" class="form-control">替换原始代码</button>
                 </div>
@@ -162,15 +170,40 @@ export class ReviseView {
     }
 
     // 处理请求
-    private handleRevisionRequest(panelID: string, data: viewUtils.RequestData) {
-        const newCode = viewUtils.generateCodeRevision(data);
-        this.panel.get(panelID)?.webview.postMessage({
-            command: viewUtils.SIGN_NAME.updateGeneratedCode,
-            content: newCode
-        });
+    private async handleRevisionRequest(panelID: string, data: viewUtils.RequestData) {
+        try {
+            // 立即通知前端开始加载
+            this.panel.get(panelID)?.webview.postMessage({
+                command: viewUtils.SIGN_NAME.updateGeneratedCode,
+                content: '' // 清空内容
+            });
+
+            const newCode = await viewUtils.generateCodeRevision(data);
+            this.panel.get(panelID)?.webview.postMessage({
+                command: viewUtils.SIGN_NAME.updateGeneratedCode,
+                content: newCode
+            });
+        } catch (error) {
+            console.error("处理请求失败:", error);
+        }
     }
 
-    private updateGeneratedCode(range: vscode.Range | null | undefined, data: any) {
-        
+    private updateGeneratedCode(
+        range: vscode.Selection, 
+        newCode: string,
+        edit: vscode.TextEditor
+    ) {
+        edit.edit(
+            (editBuilder) => {
+                // 使用新的替换逻辑
+                const currentRange = new vscode.Range(
+                    range.start.line,
+                    range.start.character,
+                    range.end.line,
+                    range.end.character
+                );
+                editBuilder.replace(currentRange, newCode);
+            }
+        )
     }
 }

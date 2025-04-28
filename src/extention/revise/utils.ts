@@ -3,6 +3,8 @@
  * 工具函数
  */
 
+import OpenAI from "openai";
+
 export const STYLE_URL = 'src/extention/revise/scripts';
 
 export type RequestData = {
@@ -29,7 +31,55 @@ export function escapeHtml(unsafe: string): string {
     .replace(/'/g, "&#039;");
 }
 
-export function generateCodeRevision(data: any): string {
-    return `// 生成的示例代码\nfunction revised() {\n  // ${data.selectedCode}\n}`;
-    // TODO: 获取代码Revision
+const deepseek = new OpenAI({
+    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    apiKey: 'sk-12cbd45e07f24df18aee038db5671c5f',
+})
+
+const parse = (data: RequestData) => {
+    return `
+        You are an assistant, 
+        please rewrite the given code as per the specified requirements. 
+        Directly give a new code for the specified requirements.
+        Original code: ${escapeHtml(data.selectedCode)}, 
+        requirements: ${escapeHtml(data.requirements)}, 
+        code style: ${escapeHtml(data.codeStyle)}, 
+        comment or not: ${data.addComments ? "Yes" : "No"}.
+    `;
+}
+
+// utils.ts 修改部分
+export async function generateCodeRevision(data: RequestData): Promise<string> {
+    try {
+        const completion = await deepseek.chat.completions.create({
+            messages: [
+                {
+                    role: "user",
+                    content: parse(data)
+                }
+            ],
+            model: "deepseek-r1",
+        });
+
+        if (completion.choices?.[0]?.message?.content) {
+            return completion.choices[0].message.content;
+        }
+        return `
+            错误1: 未生成有效内容.
+        `;
+    } catch (error: any) {
+        // 输出具体错误信息
+        console.error('API错误详情:', {
+            status: error?.status,
+            code: error?.code,
+            message: error?.message,
+            response: error?.response?.data
+        });
+        return `
+            错误2: 请求失败，请检查控制台. 
+            错误信息: ${error?.message},
+            状态码: ${error?.status}
+            响应数据: ${JSON.stringify(error?.response?.data)}
+        `;
+    }
 }

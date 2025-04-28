@@ -88,11 +88,22 @@ export async function activate(context: ExtensionContext) {
         vscode.window.activeTextEditor.selection
       )
 
+      const edit = vscode.window.activeTextEditor;
+      if (edit === undefined) {
+        vscode.window.showErrorMessage("Please select some code to review.")
+        return
+      }
+
       // 代码的范围
       const range = vscode.window.activeTextEditor?.selection;
 
+      if (range === undefined) {
+        vscode.window.showErrorMessage("Please select some code to review.")
+        return
+      }
+
       if(selectedCode) {
-        reviseView.showPanel(selectedCode, range)
+        reviseView.showPanel(selectedCode, range, edit)
       }
     }
   ))

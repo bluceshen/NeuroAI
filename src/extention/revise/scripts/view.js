@@ -11,6 +11,13 @@
 
     // 处理提交按钮点击
     document.getElementById('submit-btn').addEventListener('click', () => {
+        // 显示加载提示
+        const loadingIndicator = document.querySelector('.loading-indicator');
+        const generatedCodeSection = document.querySelector('.generated-code');
+        loadingIndicator.style.display = 'flex';
+        generatedCodeSection.style.display = 'block';
+        document.getElementById('generated-code-content').textContent = '';
+
         const getCodeContent = () => {
             const codePreviewDiv = document.querySelector('.code-preview');
             if (!codePreviewDiv) {
@@ -23,7 +30,7 @@
         };
 
         vscode.postMessage({
-            command: 'twinnyCodeRevisionRequest',
+            command: 'reviseCodeEable',
             panelID: PANEL_ID,
             data: {
                 selectedCode: getCodeContent(),
@@ -39,32 +46,29 @@
         const message = event.data;
         switch (message.command) {
             case 'updateGeneratedCode':
-                showLoading(false);
+                document.querySelector('.loading-indicator').style.display = 'none';
                 generatedCode = message.content;
                 document.getElementById('generated-code-content').textContent = generatedCode;
                 document.querySelector('.generated-code').style.display = 'block';
                 break;
             case 'error':
-                showLoading(false);
                 showError(message.message);
                 break;
         }
-    });
-
-    // 重新生成
-    document.getElementById('regenerate-btn').addEventListener('click', () => {
-        document.getElementById('submit-btn').click();
     });
 
     // 替换代码
     document.getElementById('replace-btn').addEventListener('click', () => {
         vscode.postMessage({
             command: 'replaceOriginalCode',
-            data: {
-                original: originalCode,
-                replacement: generatedCode
-            }
+            panelID: PANEL_ID,
+            data: generatedCode
         });
+
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.innerHTML = '替换原始代码';
+        }, 2000);
     });
 
     // 处理取消按钮
@@ -74,14 +78,6 @@
             panelID: PANEL_ID
         });
     });
-
-    function showLoading(show) {
-        const submitBtn = document.getElementById('submit-btn');
-        submitBtn.disabled = show;
-        submitBtn.innerHTML = show ? 
-            '<span class="loader"></span> 生成中...' : 
-            '生成';
-    }
 
     function showError(message) {
         const indicator = document.querySelector('.status-indicator');
