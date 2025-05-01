@@ -37,7 +37,6 @@ import { Suggestions } from "./suggestions"
 import { CustomKeyMap } from "./utils"
 
 import styles from "./styles/index.module.css"
-import { crawler } from "./crawler"
 
 interface ChatProps {
   fullScreen?: boolean
@@ -61,16 +60,11 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const { symmetryConnection } = useSymmetryConnection()
   const { files, removeFile } = useFileContext()
   const [isBottom, setIsBottom] = useState(false)
-  const [isRAGEnabled, setRAGEnabled] = useState(false)
+
   const { conversation, saveLastConversation, setActiveConversation } =
     useConversationHistory()
 
   const chatRef = useRef<HTMLTextAreaElement>(null)
-  // RAG复选按钮的状态
-  const [isRAGEnabled, setIsRAGEnabled] = useState(false);
-  // embedingDataBase对象
-  // TODO
-  // const embeddingDB = new EmbeddingDatabase("/path/to/directory", global.vscode)
 
   const handleAddMessage = (message: ServerMessage<ChatCompletionMessage>) => {
     if (!message.data) {
@@ -201,8 +195,8 @@ export const Chat = (props: ChatProps): JSX.Element => {
     setMessages((prev) => {
       if (!prev || prev.length === 0) return prev
       if (prev.length === 2) return prev
-      let endIndex = index + 1
-      while (endIndex < prev.length && prev[endIndex].role === "assistant") {
+      let endIndex=index+1
+      while(endIndex<prev.length&&prev[endIndex].role==="assistant"){
         endIndex++
       }
       endIndex--
@@ -274,40 +268,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     editorRef.current?.commands.clearContent()
   }, [])
 
-  // 在Chat.tsx中添加一个函数来模拟网络爬虫操作
-  const fetchDataFromWeb = async (query: string): Promise<string[]> => {
-    // 模拟网络请求延迟
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Fetching web data for query:", query);
-
-    const data: Array<String> = await crawler.searchAndScrape(query) || [];
-    let retContent = [];
-    for (let i = 0; i < data.length; i++) {
-      retContent.push(`Web data 1 for: ${data[i]}`);
-    }
-
-    const longestThree = retContent
-      .sort((a, b) => b.length - a.length) // 按长度降序排序
-      .slice(0, 3); // 取前3条
-
-    // 返回模拟的Web数据数组
-    return longestThree;
-  };
-
-  // 在Chat.tsx中添加一个函数来模拟网络爬虫操作
-  const fetchDataFromWeb = async (query: string): Promise<string[]> => {
-    // 实际爬虫逻辑
-    // TODO
-
-    // 模拟网络请求延迟
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    console.log("Fetching web data for query:", query);
-    
-    // 返回模拟的Web数据数组
-    return [`Web data 1 for: ${query}`, `Web data 2 for: ${query}`];
-  };
-
-  const handleSubmitForm = useCallback(async () => {
+  const handleSubmitForm = useCallback(() => {
     const input = editorRef.current
       ?.getHTML()
       .replace(/<p>/g, "")
@@ -329,39 +290,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     setIsLoading(true)
     clearEditor()
 
-    let webData: string[] = []; // 用于存储爬虫获取的数据
-
-    // 如果RAG复选框被选中，则执行爬虫操作
-    if (isRAGEnabled) {
-      try {
-        // webData = fetchDataFromWeb(text); // 调用爬虫函数
-        console.log("Fetched web data:", webData);
-      } catch (error) {
-        console.error("Error fetching or embedding web data:", error);
-        // 可以选择是否在爬虫失败或嵌入失败时继续发送消息
-        // 如果需要取消发送，可以在此处 return;
-      }
-    }
-
     const conversationId = conversation?.id || uuidv4();
-
-    let webData: string[] = []; // 用于存储爬虫获取的数据
-
-  // 如果RAG复选框被选中，则执行爬虫操作
-    if (isRAGEnabled) {
-      try {
-        webData = await fetchDataFromWeb(text); // 调用爬虫函数
-        console.log("Fetched web data:", webData);
-
-        // 假设你已经有了一个EmbeddingDatabase实例：embeddingDB
-        // await embeddingDB.injestWebDocuments(webData, "/path/to/directory"); 
-        // await embeddingDB.populateWebDatabase();
-      } catch (error) {
-        console.error("Error fetching or embedding web data:", error);
-        // 可以选择是否在爬虫失败或嵌入失败时继续发送消息
-        // 如果需要取消发送，可以在此处 return;
-      }
-    }
 
     setMessages((prevMessages) => {
       const updatedMessages: ChatCompletionMessage[] = [
@@ -376,15 +305,11 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
       const clientMessage: ClientMessage<
         ChatCompletionMessage[],
-        { mentions: MentionType[]; ragEnabled: boolean; webData: string[] }
+        MentionType[]
       > = {
         type: EVENT_NAME.twinnyChatMessage,
         data: updatedMessages,
-        meta: {
-          mentions,
-          ragEnabled: isRAGEnabled, // 添加RAG状态
-          webData // 将爬虫数据包含在meta中
-        },
+        meta: mentions,
         key: conversationId // Pass the conversation ID as the key
       }
 
@@ -396,7 +321,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
       return updatedMessages
     })
   }, [
-    conversation?.id, isRAGEnabled // 添加isRAGEnabled到依赖项
+    conversation?.id
   ])
 
   const handleNewConversation = useCallback(() => {
@@ -428,7 +353,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     window.addEventListener("message", messageEventHandler)
     editorRef.current?.commands.focus()
-
+ 
     // 处理消息的逻辑
     return () => {
       window.removeEventListener("message", messageEventHandler)
