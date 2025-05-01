@@ -100,7 +100,7 @@ class SearchEngine {
 }
 
 class WebScraper {
-  async scrape(url: string): Promise<string[]> {
+  async scrape(url: string): Promise<string> {
     try {
       // 允许自动跳转
       const result = await superagent.get(url);
@@ -113,10 +113,10 @@ class WebScraper {
       // this.saveJson(quoteList);
 
       // 返回提取的内容
-      return quoteList;
+      return JSON.stringify(quoteList, null, 2);
     } catch (error) {
       console.error(`Error fetching HTML content from ${url}:`, error);
-      return [];
+      return '';
     }
   }
 
@@ -146,9 +146,7 @@ class WebScraper {
     // 只保留前三个数据
     quoteList = quoteList.slice(0, 3);
 
-    const text = quoteList.map(value=>value.text);
-
-    return text;
+    return quoteList;
   }
 
   saveJson(quoteInfo: QuoteData) {

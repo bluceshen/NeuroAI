@@ -60,6 +60,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const { symmetryConnection } = useSymmetryConnection()
   const { files, removeFile } = useFileContext()
   const [isBottom, setIsBottom] = useState(false)
+  const [isRAGEnabled, setRAGEnabled] = useState(false)
 
   const { conversation, saveLastConversation, setActiveConversation } =
     useConversationHistory()
@@ -292,6 +293,24 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     const conversationId = conversation?.id || uuidv4();
 
+    /*----------------------------*/
+    /*
+      我的想法是 发送的消息增加 webData字段到消息里面
+      然后provider/base的streamChatCompletion函数接收消息
+      再调用 chat的completion时把消息附加上去， 
+      然后再按照相关文件处理的方式进行处理
+      const clientMessage: ClientMessage<
+        ChatCompletionMessage[],
+        MentionType[]
+      > = {
+        type: EVENT_NAME.twinnyChatMessage,
+        data: updatedMessages,
+        meta: {mentions， webData},
+        key: conversationId // Pass the conversation ID as the key
+      }
+      
+    */
+    /*----------------------------*/
     setMessages((prevMessages) => {
       const updatedMessages: ChatCompletionMessage[] = [
         ...(prevMessages || []),
@@ -550,16 +569,25 @@ export const Chat = (props: ChatProps): JSX.Element => {
         </div>
         <form>
           <div className={styles.chatBox}>
-            <EditorContent
-              className={styles.tiptap}
-              editor={editorRef.current}
-            />
-            <div
-              role="button"
-              onClick={handleSubmitForm}
-              className={styles.chatSubmit}
-            >
-              <span className="codicon codicon-send"></span>
+            <EditorContent className={styles.tiptap} editor={editorRef.current} />
+            <div className={styles.chatOptions}>
+              <div className={styles.ragCheckbox}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={isRAGEnabled}
+                    onChange={(e) => setRAGEnabled(e.target.checked)}
+                  />
+                  RAG
+                </label>
+              </div>
+              <div
+                role="button"
+                onClick={handleSubmitForm}
+                className={styles.chatSubmit}
+              >
+                <span className="codicon codicon-send"></span>
+              </div>
             </div>
           </div>
         </form>
