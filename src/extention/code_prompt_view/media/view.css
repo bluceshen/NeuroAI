@@ -1,0 +1,49 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    padding: 20px;
+    background-color: var(--vscode-editor-background);
+    color: var(--vscode-editor-foreground);
+}
+.code-block {
+    background-color: var(--vscode-textBlockQuote-background);
+    border-radius: 4px;
+    padding: 15px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+pre {
+    background-color: var(--vscode-editorWidget-background);
+    padding: 10px;
+    border-radius: 3px;
+    overflow-x: auto;
+    white-space: pre-wrap;
+}
+.replace-btn {
+    background-color: var(--vscode-button-background);
+    color: var(--vscode-button-foreground);
+    border: none;
+    padding: 8px 12px;
+    margin-top: 10px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.replace-btn:hover {
+    background-color: var(--vscode-button-hoverBackground);
+}
+.file-info {
+    font-size: 0.8em;
+    color: var(--vscode-descriptionForeground);
+    margin-top: 5px;
+}
+h3 {
+    margin-top: 0;
+    color: var(--vscode-editor-foreground);
+    border-bottom: 1px solid var(--vscode-editorWidget-border);
+    padding-bottom: 5px;
+}
+h2 {
+    margin-top: 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--vscode-editorWidget-border);
+}

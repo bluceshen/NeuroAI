@@ -31,6 +31,8 @@ import { delayExecution } from "./extention/public/utils"
 import { getLineBreakCount } from "./extention/public/utils"
 
 import { ReviseView } from "./extention/revise/view"
+import { ModeCodeView } from "./extention/code_prompt_view/view"
+import { ModelCodeDate } from "./extention/code_prompt_view/utils"
 
 export async function activate(context: ExtensionContext) {
   setContext(context)
@@ -77,7 +79,6 @@ export async function activate(context: ExtensionContext) {
 
   templateProvider.init()
 
-  // DEMO
   // 右键代码重审
   const reviseView = new ReviseView(context)
   context.subscriptions.push(commands.registerCommand(
@@ -105,6 +106,23 @@ export async function activate(context: ExtensionContext) {
       if(selectedCode) {
         reviseView.showPanel(selectedCode, range, edit)
       }
+    }
+  ))
+
+  // 代码补全展示面板
+  const modeCodeView = new ModeCodeView(context)
+  context.subscriptions.push(commands.registerCommand(
+    'modelCode.showView',
+    () => {
+      const data: ModelCodeDate = {
+        modelName: 'gpt-4',
+        code: 'if (true) { return true; }',
+        range: new vscode.Range(
+          new vscode.Position(0, 0),
+          new vscode.Position(2,2)
+        )
+      }
+      modeCodeView.showPanel([data, data])
     }
   ))
 

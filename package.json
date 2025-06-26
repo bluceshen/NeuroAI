@@ -64,7 +64,10 @@
           "command": "ai.revise",
           "when": "editorHasSelection"
         },
-
+        {
+          "when": "editorTextFocus",
+          "command": "modelCode.showView"
+        },
         {
           "when": "editorTextFocus",
           "command": "twinny.explain"
@@ -149,7 +152,10 @@
         "command": "ai.revise",
         "title": "Al Revise Code"
       },
-
+      {
+        "command": "modelCode.showView",
+        "title": "Show model code view"
+      },
       {
         "command": "twinny.explain",
         "title": "Twinny - Explain"
@@ -261,6 +267,11 @@
       }
     ],
     "keybindings": [
+      {
+        "command": "modelCode.showView",
+        "key": "ctrl+alt+m",
+        "when": "editorTextFocus"
+      },
       {
         "key": "Alt+\\",
         "command": "editor.action.inlineSuggest.trigger",
