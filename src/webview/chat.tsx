@@ -114,6 +114,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const handleCompletionMessage = (
     message: ServerMessage<ChatCompletionMessage>
   ) => {
+    generatingRef.current=true
     setCompletion(message.data)
   }
 
