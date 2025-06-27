@@ -2,6 +2,7 @@ import AsyncLock from "async-lock"
 import fs from "fs"
 import ignore from "ignore"
 import path from "path"
+import { ModeCodeView } from "../code_prompt_view/view"
 import {
   ExtensionContext,
   InlineCompletionContext,
@@ -31,7 +32,8 @@ import {
   MULTI_LINE_DELIMITERS,
   MULTILINE_INSIDE,
   MULTILINE_OUTSIDE,
-  OPENING_BRACKETS
+  OPENING_BRACKETS,
+  SEND_COMPLETION_LIST,
 } from "../../common/constants"
 import { supportedLanguages } from "../../common/languages"
 import { logger } from "../../common/logger"
@@ -67,6 +69,7 @@ import {
   getShouldSkipCompletion,
   getLineBreakCount
 } from "../public/utils"
+
 import * as vscode from "vscode";
 
 // 新增接口，管理局部状态
@@ -77,6 +80,15 @@ interface LocalState {
   onDataNums: number;
   position: Position | null;
   nonce: number;
+}
+
+export interface CompletionDetails {
+  model: string;
+  position_start_line: number,
+  position_start_character: number,
+  position_end_line: number,
+  position_end_character: number,
+  code: string;
 }
 
 export class CompletionProvider
@@ -108,12 +120,16 @@ export class CompletionProvider
   private selectedModel: string | null = null; // 当前选中的模型
   private completionModelMap: Map<string | vscode.SnippetString, string> = new Map(); // 补全文本到模型名称的映射
   private quickPick: vscode.QuickPick<vscode.QuickPickItem> | null = null; // 悬浮条
+  private _sendCompletionList: CompletionDetails[] | null = null; // 用于存储提供的补全列表
+  private _context: ExtensionContext | null = null;// 新增：保存 context
+  private _view: ModeCodeView | null = null
 
   constructor(
     statusBar: StatusBarItem,
     fileInteractionCache: FileInteractionCache,
     templateProvider: TemplateProvider,
-    context: ExtensionContext
+    context: ExtensionContext,
+    webView: ModeCodeView
   ) {
     super(context)
     this._abortController = null
@@ -123,11 +139,14 @@ export class CompletionProvider
     this._statusBar = statusBar
     this._fileInteractionCache = fileInteractionCache
     this._templateProvider = templateProvider
+    this._sendCompletionList = []
+    this._view = webView
 
-     // 初始化模型优先级
+    // 初始化模型优先级
     this.modelPriorities = {};
     this.selectedModel = null;
     this.quickPick = null
+    this._context = context; // 保存 context
 
     // 注册命令
     context.subscriptions.push(
@@ -309,6 +328,17 @@ export class CompletionProvider
     this.quickPick?.hide();
   }
 
+  // 保存补全信息到代码context
+  private sendCompletionList() {
+    // 发送补全列表到前端
+    this._context?.globalState.update(SEND_COMPLETION_LIST, undefined);
+    console.log("ddddd", this._context?.globalState.get<CompletionDetails[]>(SEND_COMPLETION_LIST))
+
+    this._context?.globalState.update(SEND_COMPLETION_LIST, this._sendCompletionList);
+    if (this._view != null) this._view.showPanel();
+    console.log("Sent completion list:", this._sendCompletionList);
+  }
+
   public async provideInlineCompletionItems(
     document: TextDocument,
     position: Position,
@@ -390,10 +420,13 @@ export class CompletionProvider
       this.selectedModel = this.completionModelMap.get(this._finalResults[0].insertText) || null;
       this.updateStatusBar();
     }
+    await this._context?.globalState.update(SEND_COMPLETION_LIST, []);
+
+    // 将补全结果保存到全局上下文中
+    this.sendCompletionList();
 
     return new InlineCompletionList(this._finalResults); // 自动处理空数组情况
   }
-
 
   private onEnd(provider: TwinnyProvider, completion: string, resolve: (completion: ResolvedInlineCompletion) => void) {
     // 先获取结果
@@ -688,8 +721,8 @@ export class CompletionProvider
     return pairs[open] === close;
   }
 
-  public onError = (localState: LocalState|null) => {
-    if(!localState) return
+  public onError = (localState: LocalState | null) => {
+    if (!localState) return
     localState.abortController?.abort()
   }
 
@@ -981,6 +1014,16 @@ export class CompletionProvider
 
     // 将模型名称与补全文本关联
     this.completionModelMap.set(formattedCompletion, provider.modelName);
+    // 存储到 _sendCompletionList
+    this._sendCompletionList?.push({
+      model: provider.modelName,
+      position_start_line: this._position.line,
+      position_start_character: this._position.character,
+      position_end_line: this._position.line,
+      position_end_character: this._position.character,
+      code: formattedCompletion
+    });
+
 
     return completionItem;
   }

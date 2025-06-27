@@ -10,7 +10,8 @@ import {
   SYSTEM,
   TWINNY_COMMAND_NAME,
   WORKSPACE_STORAGE_KEY,
-  GLOBAL_STORAGE_KEY
+  GLOBAL_STORAGE_KEY,
+  SEND_COMPLETION_LIST //------
 } from "../../common/constants"
 import { logger } from "../../common/logger"
 import {
@@ -462,7 +463,7 @@ export class BaseProvider {
         })
       )
     }
-
+    
     // 首先chat不能时未定义状态
     if (this.changeChatArray() && this.chat) {
       // 遍历chat，让它每一个都停止

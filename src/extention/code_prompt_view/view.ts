@@ -2,34 +2,51 @@
 // 1. 代码的长度可能过长，把代码块改成超过一定长度之后滚动条展示
 // 2. 添加代码块的复制功能
 // 3. 
-
+import { SEND_COMPLETION_LIST } from '../../common/constants';
 import * as vscode from 'vscode';
-import { ModelCodeDate, MEDIA_PATH } from './utils';
+import { CompletionDetails } from '../complete_func/completion';
+export const MEDIA_PATH = 'src/extention/code_prompt_view/media';
+
+let panel: vscode.WebviewPanel | undefined;
+
+function getPanel(): vscode.WebviewPanel {
+    if (panel) {
+        return panel;
+    }
+
+    panel = vscode.window.createWebviewPanel(
+        'mode code view',
+        '代码补全',
+        vscode.ViewColumn.Beside,
+        {
+            enableScripts: true,
+            retainContextWhenHidden: true
+        }
+    );
+
+    panel.onDidDispose(() => {
+        panel = undefined;
+    });
+
+    return panel;
+}
+
 
 export class ModeCodeView {
     private context: vscode.ExtensionContext;
-    private data: ModelCodeDate[] = []; // 存储后端数据
+    private data: CompletionDetails[] = []; // 存储后端数据
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
     }
 
     // 显示Webview面板
-    public showPanel(data: ModelCodeDate[]) {
-        this.data = data;
-        const panel = vscode.window.createWebviewPanel(
-            'mode code view',    // 标识符
-            '代码补全',          // 标题
-            vscode.ViewColumn.Beside, // 显示在编辑器的右侧
-            {                   
-                enableScripts: true,     // 允许执行脚本
-                retainContextWhenHidden: true // 在隐藏时保留Webview上下文
-            }
-        );
-
+    public showPanel() {
+        this.data = []
+        const panel = getPanel();
         panel.webview.onDidReceiveMessage(
             message => {
-                switch(message.command) {
+                switch (message.command) {
                     case 'modeCodeReplace':
                         this.replaceEditorContent(message.data);
                         return;
@@ -37,13 +54,47 @@ export class ModeCodeView {
             }
         );
 
+        // 获取存储的列表数据
+        const list = this.context.globalState.get<CompletionDetails[]>(SEND_COMPLETION_LIST);
+        let len = list?.length;
+
+        // 创建转换函数，用于将每个元素转换为新对象
+        function convertToViewData(item: any): CompletionDetails & { position: vscode.Range } {
+            const start = new vscode.Position(item.position_start_line ?? 0, item.position_start_character ?? 0);
+            const end = new vscode.Position(item.position_end_line ?? 0, item.position_end_character ?? 0);
+
+            return {
+                model: item.model ?? 'default',
+                code: item.code ?? '',
+                position_start_line: item.position_start_line ?? 0,
+                position_start_character: item.position_start_character ?? 0,
+                position_end_line: item.position_end_line ?? 0,
+                position_end_character: item.position_end_character ?? 0,
+                position: new vscode.Range(start, end)
+            };
+        }
+
+
+        if (Array.isArray(list)) {
+            // 使用map方法逐个转换list中的元素
+            this.data = list.map((item) => {
+                return convertToViewData(item);
+            });
+        } else {
+            // list不是数组，初始化this.data为默认值
+            // this.data = [{ model: "pdd", position: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)), code: "ghjgh" }];
+        }
+
+
+        console.log("Completion List:", len, this.data.length);
         panel.webview.html = this.getWebviewContent(panel.webview, this.data);
     }
 
     private getWebviewContent(
         webView: vscode.Webview,
-        data: ModelCodeDate[],
+        data: CompletionDetails[],
     ): string {
+        console.log("Web:", data);
         const scriptUri = webView.asWebviewUri(vscode.Uri.joinPath(
             this.context.extensionUri, MEDIA_PATH, 'view.js'
         ));
@@ -53,14 +104,16 @@ export class ModeCodeView {
         ));
 
         // 生成代码块HTML
-        const codeBlocks = data.map((item, index) => `
-            <div class="code-block">
-                <h3>${item.modelName}</h3>
+        const codeBlocks = data.map((item, index) => {
+            console.log("Data is the ", item)
+            return `<div class="code-block">
+                <h3>${item.model}</h3>
                 <pre>${item.code}</pre>
                 <button class="replace-btn" data-index="${index}">替换代码</button>
-                <div class="file-info">[${item.range.start.line}-${item.range.end.line}]</div>
+                <div class="file-info">[${item.position_end_line}-${item.position_end_line}]</div>
             </div>
-        `).join('');
+            `
+        }).join('');
 
         return `<!DOCTYPE html>
         <html lang="en">
@@ -87,7 +140,10 @@ export class ModeCodeView {
         const edit = vscode.window.activeTextEditor;
         edit?.edit(
             (editBuilder) => {
-                editBuilder.replace(data.range, data.code);
+                editBuilder.replace(new vscode.Range(
+                    new vscode.Position(data.position_start_line, data.position_start_character),
+                    new vscode.Position(data.position_end_line, data.position_end_character)), 
+                    data.code);
             }
         )
     }

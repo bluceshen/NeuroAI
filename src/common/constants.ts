@@ -30,6 +30,7 @@ export const MIN_COMPLETION_CHUNKS = 2
 export const MAX_EMPTY_COMPLETION_CHARS = 250
 export const DEFAULT_RERANK_THRESHOLD = 0.5
 export const URL_SYMMETRY_WS = "https://twinny.dev/ws"
+export const SEND_COMPLETION_LIST = "twinny.send-completion-list" //---
 
 export const defaultChunkOptions = {
   maxSize: 500,
@@ -93,7 +94,7 @@ export const EVENT_NAME = {
   twinnyGetModels: "twinny-get-models",
   twinnyAddOpenFilesToContext: "twinny-add-open-file-to-context",
   twinnyGetContextFiles: "twinny-get-context-files",
-  twinnyRemoveContextFile: "twinny-remove-context-file"
+  twinnyRemoveContextFile: "twinny-remove-context-file",
 }
 
 export const TWINNY_COMMAND_NAME = {

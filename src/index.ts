@@ -46,7 +46,7 @@ export async function activate(context: ExtensionContext) {
     context,
     templateDir,
     statusBarItem
-    
+
   )
 
 
@@ -70,11 +70,21 @@ export async function activate(context: ExtensionContext) {
     sessionManager
   )
 
+  // 代码补全展示面板
+  const modeCodeView = new ModeCodeView(context)
+  context.subscriptions.push(commands.registerCommand(
+    'modelCode.showView',
+    () => {
+      modeCodeView.showPanel()
+    }
+  ))
+
   const completionProvider = new CompletionProvider(
     statusBarItem,
     fileInteractionCache,
     templateProvider,
-    context
+    context,
+    modeCodeView
   )
 
   templateProvider.init()
@@ -103,28 +113,13 @@ export async function activate(context: ExtensionContext) {
         return
       }
 
-      if(selectedCode) {
+      if (selectedCode) {
         reviseView.showPanel(selectedCode, range, edit)
       }
     }
   ))
 
-  // 代码补全展示面板
-  const modeCodeView = new ModeCodeView(context)
-  context.subscriptions.push(commands.registerCommand(
-    'modelCode.showView',
-    () => {
-      const data: ModelCodeDate = {
-        modelName: 'gpt-4',
-        code: 'if (true) { return true; }',
-        range: new vscode.Range(
-          new vscode.Position(0, 0),
-          new vscode.Position(2,2)
-        )
-      }
-      modeCodeView.showPanel([data, data])
-    }
-  ))
+
 
   context.subscriptions.push(
     languages.registerInlineCompletionItemProvider(
@@ -297,8 +292,8 @@ export async function activate(context: ExtensionContext) {
     }),
     commands.registerCommand(TWINNY_COMMAND_NAME.newConversation, () => {
       sidebarProvider.conversationHistory?.resetConversation()
-      if(sidebarProvider.chat && sidebarProvider.chat.length>0)
-      sidebarProvider.chat[0].resetConversation()
+      if (sidebarProvider.chat && sidebarProvider.chat.length > 0)
+        sidebarProvider.chat[0].resetConversation()
       sidebarProvider.newSymmetryConversation()
       sidebarProvider.webView?.postMessage({
         type: EVENT_NAME.twinnyNewConversation

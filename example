@@ -1,9 +1,4 @@
-/* Time of publishing: 10.07.2021, 16:54:38 */
+for i 
 f
-// Function that returns the input parameter
-function f(a) {
-    return a;
-}
-
-// Assign the result of f(1) to variable x
-var x = f(1);
+f
+f
