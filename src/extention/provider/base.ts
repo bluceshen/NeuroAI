@@ -434,48 +434,58 @@ export class BaseProvider {
   private streamChatCompletion = async (
     data: ClientMessage<ChatCompletionMessageParam[]>
   ) => {
-    const symmetryConnected = this._sessionManager?.get(
-      EXTENSION_SESSION_NAME.twinnySymmetryConnection
-    )
-    if (symmetryConnected) {
-      const systemMessage = {
-        role: SYSTEM,
-        content: await this._templateProvider?.readSystemMessageTemplate()
-      }
+  const symmetryConnected = this._sessionManager?.get(
+    EXTENSION_SESSION_NAME.twinnySymmetryConnection
+  );
+  
+  // 1. 对称连接处理
+  if (symmetryConnected) {
+    const systemMessage = {
+      role: SYSTEM,
+      content: await this._templateProvider?.readSystemMessageTemplate()
+    };
 
-      const messages = [
-        systemMessage,
-        ...(data.data as ChatCompletionMessage[])
-      ].map(m => ({
-        ...m,
-        content: m.content
-      }))
+    const messages = [
+      systemMessage,
+      ...(data.data as ChatCompletionMessage[])
+    ].map(m => ({
+      ...m,
+      content: m.content
+    }));
 
-      logger.log(`
-        Using symmetry for inference
-        Messages: ${JSON.stringify(messages)}
-      `)
+    logger.log(`Using symmetry for inference\nMessages: ${JSON.stringify(messages)}`);
 
-      return this._symmetryService?.write(
-        createSymmetryMessage(serverMessageKeys.inference, {
-          messages,
-          key: SYMMETRY_EMITTER_KEY.inference
-        })
-      )
-    }
-    
-    // 首先chat不能时未定义状态
-    if (this.changeChatArray() && this.chat) {
-      // 遍历chat，让它每一个都停止
-      for (let i = 0; i < this.chat?.length; i++) {
-        this.chat[i]?.completion(
+    return this._symmetryService?.write(
+      createSymmetryMessage(serverMessageKeys.inference, {
+        messages,
+        key: SYMMETRY_EMITTER_KEY.inference
+      })
+    );
+  }
+
+  // 2. 非对称连接处理（改为同步执行）
+  if (this.changeChatArray() && this.chat) {
+    // 顺序处理每个聊天实例
+    for (let i = 0; i < this.chat.length; i++) {
+      const instance = this.chat[i];
+      if (!instance) continue; // 跳过无效实例
+      
+      try {
+        // 等待当前实例完成后再处理下一个
+        await instance.completion(
           data.data || [],
           data.meta as FileContextItem[],
-          data.key // Pass the conversation ID
-        )
+          data.key, // 传递会话ID,
+          data.isRAGEnabled,
+          data.text
+        );
+      } catch (error) {
+        // 处理错误但不中断后续实例
+        logger.error(`Completion failed for instance ${i}`);
       }
     }
   }
+};
 
   private getSelectedText = () => {
     this.sendTextSelectionToWebView(getTextSelection())

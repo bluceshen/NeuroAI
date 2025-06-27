@@ -1,8 +1,8 @@
 {
-  "name": "twinny",
-  "displayName": "twinny - AI Code Completion and Chat",
+  "name": "Neuro AI",
+  "displayName": "NeuroFill AI Coding",
   "description": "Locally hosted AI code completion plugin for vscode",
-  "version": "3.22.26",
+  "version": "1.0.0",
   "icon": "assets/icon.png",
   "keywords": [
     "code-inference",
@@ -11,7 +11,6 @@
     "localhost",
     "no-leaks",
     "private",
-    "twinny",
     "ai",
     "ollama",
     "llama",
@@ -27,15 +26,15 @@
     "vscode-extension"
   ],
   "repository": {
-    "url": "https://github.com/twinnydotdev/twinny"
+    "url": "https://github.com/bluceshen/twinny-plus/tree/main/src"
   },
   "license": "MIT",
-  "publisher": "rjmacarthy",
+  "publisher": "Mike1",
   "engines": {
     "vscode": "^1.84.0"
   },
   "bugs": {
-    "url": "https://github.com/twinnydotdev/twinny/issues"
+    "url": "https://github.com/bluceshen/twinny-plus/tree/main/src"
   },
   "categories": [
     "Programming Languages",
@@ -197,8 +196,8 @@
       },
       {
         "command": "twinny.settings",
-        "shortTitle": "twinny settings",
-        "title": "Open twinny settings",
+        "shortTitle": "Neuro AI settings",
+        "title": "Open Neuro AI settings",
         "icon": "$(gear)"
       },
       {
@@ -215,14 +214,14 @@
       },
       {
         "command": "twinny.conversationHistory",
-        "shortTitle": "twinny conversation history",
-        "title": "Open twinny conversation history",
+        "shortTitle": "Neuro AIconversation history",
+        "title": "Open Neuro AI conversation history",
         "icon": "$(history)"
       },
       {
         "command": "twinny.openPanelChat",
-        "shortTitle": "Open twinny panel chat",
-        "title": "Open twinny panel chat",
+        "shortTitle": "Open Neuro AI panel chat",
+        "title": "Open Neuro AI panel chat",
         "icon": "$(screen-full)"
       },
       {
@@ -239,14 +238,14 @@
       },
       {
         "command": "twinny.manageTemplates",
-        "shortTitle": "Manage twinny templates",
-        "title": "Manage twinny templates",
+        "shortTitle": "Manage Neuro AI templates",
+        "title": "Manage Neuro AI templates",
         "icon": "$(files)"
       },
       {
         "command": "twinny.manageProviders",
-        "shortTitle": "Manage twinny providers",
-        "title": "Manage twinny providers",
+        "shortTitle": "Manage Neuro AI providers",
+        "title": "Manage Neuro AI providers",
         "icon": "$(plug)"
       },
       {
@@ -297,7 +296,7 @@
       "activitybar": [
         {
           "id": "twinny-sidebar-view",
-          "title": "twinny",
+          "title": "Neuro AI",
           "icon": "assets/twinny.svg"
         }
       ]
@@ -307,14 +306,14 @@
         {
           "type": "webview",
           "id": "twinny.sidebar",
-          "name": "twinny",
+          "name": "Neuro AI",
           "icon": "assets/twinny.svg",
-          "contextualTitle": "twinny"
+          "contextualTitle": "Neuro AI"
         }
       ]
     },
     "configuration": {
-      "title": "twinny",
+      "title": "Neuro AI",
       "properties": {
         "twinny.enabled": {
           "order": 0,

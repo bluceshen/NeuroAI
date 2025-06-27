@@ -38,6 +38,8 @@ import { CustomKeyMap } from "./utils"
 
 import styles from "./styles/index.module.css"
 
+import { crawler } from "./crawler"
+
 interface ChatProps {
   fullScreen?: boolean
 }
@@ -114,6 +116,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
   const handleCompletionMessage = (
     message: ServerMessage<ChatCompletionMessage>
   ) => {
+    generatingRef.current=true
     setCompletion(message.data)
   }
 
@@ -269,7 +272,7 @@ export const Chat = (props: ChatProps): JSX.Element => {
     editorRef.current?.commands.clearContent()
   }, [])
 
-  const handleSubmitForm = useCallback(() => {
+  const handleSubmitForm = useCallback(async () => {
     const input = editorRef.current
       ?.getHTML()
       .replace(/<p>/g, "")
@@ -293,24 +296,6 @@ export const Chat = (props: ChatProps): JSX.Element => {
 
     const conversationId = conversation?.id || uuidv4();
 
-    /*----------------------------*/
-    /*
-      我的想法是 发送的消息增加 webData字段到消息里面
-      然后provider/base的streamChatCompletion函数接收消息
-      再调用 chat的completion时把消息附加上去， 
-      然后再按照相关文件处理的方式进行处理
-      const clientMessage: ClientMessage<
-        ChatCompletionMessage[],
-        MentionType[]
-      > = {
-        type: EVENT_NAME.twinnyChatMessage,
-        data: updatedMessages,
-        meta: {mentions， webData},
-        key: conversationId // Pass the conversation ID as the key
-      }
-      
-    */
-    /*----------------------------*/
     setMessages((prevMessages) => {
       const updatedMessages: ChatCompletionMessage[] = [
         ...(prevMessages || []),
@@ -329,7 +314,9 @@ export const Chat = (props: ChatProps): JSX.Element => {
         type: EVENT_NAME.twinnyChatMessage,
         data: updatedMessages,
         meta: mentions,
-        key: conversationId // Pass the conversation ID as the key
+        key: conversationId, // Pass the conversation ID as the key
+        isRAGEnabled: isRAGEnabled,
+        text: text
       }
 
       saveLastConversation(currentConversation)
@@ -340,7 +327,8 @@ export const Chat = (props: ChatProps): JSX.Element => {
       return updatedMessages
     })
   }, [
-    conversation?.id
+    conversation?.id,
+    isRAGEnabled
   ])
 
   const handleNewConversation = useCallback(() => {

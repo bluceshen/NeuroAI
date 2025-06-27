@@ -61,6 +61,7 @@ import {
   getLanguage,
   updateLoadingMessage
 } from "../public/utils"
+import { crawler } from "../../webview/crawler"
 
 export class Chat extends Base {
   private _completion = ""
@@ -84,6 +85,7 @@ export class Chat extends Base {
   private _isCancelled = false
   private _fileHandler: FileHandler
   private _provider: TwinnyProvider
+  private _webContext: string = ""
 
   constructor(
     statusBar: StatusBarItem,
@@ -554,6 +556,11 @@ export class Chat extends Base {
     )
     if (fileContents) context += `File Contents:\n${fileContents}\n\n`
 
+    // 添加爬虫数据作为额外上下文
+    if (this._webContext) {
+      context += `Web Search Results:\n${this._webContext}\n\n`;
+    }
+
     return context
   }
 
@@ -608,12 +615,12 @@ export class Chat extends Base {
         ...message,
         conversationId: id || message.id, // Preserve the conversationId
         content: stringContent.replace(/&lt;/g, "<")
-        .replace(/@problems/g, "").trim()
-        .replace(/@workspace/g, "").trim()
-        .replace(/&amp;/g, "&")
-        .replace(/&gt;/g, ">")
-        .replace(/<span[^>]*data-type="mention"[^>]*>(.*?)<\/span>/g, "$1")
-        .trimStart()
+          .replace(/@problems/g, "").trim()
+          .replace(/@workspace/g, "").trim()
+          .replace(/&amp;/g, "&")
+          .replace(/&gt;/g, ">")
+          .replace(/<span[^>]*data-type="mention"[^>]*>(.*?)<\/span>/g, "$1")
+          .trimStart()
       }
     })
   }
@@ -717,19 +724,35 @@ export class Chat extends Base {
 
 
   public async completion(
-    
+
     messages: ChatCompletionMessage[],
     fileContexts?: FileContextItem[],
-    conversationId?: string // Add parameter for conversation ID
+    conversationId?: string, // Add parameter for conversation ID
+    isRAGEnabled?: boolean,
+    text?: string
   ) {
     this._completion = ""
     this._isCancelled = false
     this.sendEditorLanguage()
+    this._webContext = ""
 
     console.log("Received completion request with conversation ID:", conversationId)
     const chosenModels = this.context?.globalState.get(GLOBAL_STORAGE_KEY.chosenModels) as string[]
-    console.log("bd choseModels: ",chosenModels)
-  
+    console.log("bd choseModels: ", chosenModels)
+
+    console.log("completion isRAGEnabled: ", isRAGEnabled)
+    console.log("completion text: ", text)
+    if (text != undefined && isRAGEnabled != undefined && isRAGEnabled) {
+      try {
+        const webData = await crawler.searchAndScrape(text)
+        this._webContext = webData
+        .map((content, index) => `[Result ${index + 1}]:\n${content}`)
+        .join("\n\n");
+        console.log("completion webData:", webData)
+      } catch (error) {
+        console.error('completion crawl data error:', error)
+      }
+    }
 
     // const provider = this.getProvider()
     const provider = this._provider

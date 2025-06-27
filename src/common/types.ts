@@ -91,6 +91,8 @@ export interface ClientMessage<
   meta?: Y
   type?: string
   key?: string
+  isRAGEnabled?: boolean
+  text?: string
 }
 
 export type ClientMessageWithData = ClientMessage<string | boolean> &
