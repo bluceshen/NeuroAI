@@ -332,10 +332,8 @@ export class CompletionProvider
   private sendCompletionList() {
     // 发送补全列表到前端
     this._context?.globalState.update(SEND_COMPLETION_LIST, undefined);
-    console.log("ddddd", this._context?.globalState.get<CompletionDetails[]>(SEND_COMPLETION_LIST))
-
     this._context?.globalState.update(SEND_COMPLETION_LIST, this._sendCompletionList);
-    if (this._view != null) this._view.showPanel();
+    if (this._view != null) this._view.setData();
     console.log("Sent completion list:", this._sendCompletionList);
   }
 
@@ -345,6 +343,7 @@ export class CompletionProvider
     context: InlineCompletionContext
   ): Promise<InlineCompletionItem[] | InlineCompletionList | null | undefined> {
     const editor = window.activeTextEditor
+    this._sendCompletionList = []
     const providers = this.getFimProvider()
     if (!providers) return
     this._provider = Object.values(providers)
@@ -1015,16 +1014,16 @@ export class CompletionProvider
     // 将模型名称与补全文本关联
     this.completionModelMap.set(formattedCompletion, provider.modelName);
     // 存储到 _sendCompletionList
-    this._sendCompletionList?.push({
-      model: provider.modelName,
-      position_start_line: this._position.line,
-      position_start_character: this._position.character,
-      position_end_line: this._position.line,
-      position_end_character: this._position.character,
-      code: formattedCompletion
-    });
-
-
+    if (formattedCompletion.length > 0) {
+      this._sendCompletionList?.push({
+        model: provider.modelName,
+        position_start_line: this._position.line,
+        position_start_character: this._position.character,
+        position_end_line: this._position.line,
+        position_end_character: this._position.character,
+        code: formattedCompletion
+      });
+    }
     return completionItem;
   }
 }

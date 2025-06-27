@@ -24,10 +24,6 @@ function getPanel(): vscode.WebviewPanel {
         }
     );
 
-    panel.onDidDispose(() => {
-        panel = undefined;
-    });
-
     return panel;
 }
 
@@ -35,28 +31,25 @@ function getPanel(): vscode.WebviewPanel {
 export class ModeCodeView {
     private context: vscode.ExtensionContext;
     private data: CompletionDetails[] = []; // 存储后端数据
+    private panel: vscode.WebviewPanel
 
     constructor(context: vscode.ExtensionContext) {
         this.context = context;
-    }
-
-    // 显示Webview面板
-    public showPanel() {
-        this.data = []
-        const panel = getPanel();
-        panel.webview.onDidReceiveMessage(
-            message => {
-                switch (message.command) {
-                    case 'modeCodeReplace':
-                        this.replaceEditorContent(message.data);
-                        return;
-                }
+        this.panel = vscode.window.createWebviewPanel(
+            'mode code view',
+            '代码补全',
+            vscode.ViewColumn.Beside,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
             }
         );
+    }
 
+    public setData() {
+        this.data = []
         // 获取存储的列表数据
         const list = this.context.globalState.get<CompletionDetails[]>(SEND_COMPLETION_LIST);
-        let len = list?.length;
 
         // 创建转换函数，用于将每个元素转换为新对象
         function convertToViewData(item: any): CompletionDetails & { position: vscode.Range } {
@@ -84,10 +77,36 @@ export class ModeCodeView {
             // list不是数组，初始化this.data为默认值
             // this.data = [{ model: "pdd", position: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)), code: "ghjgh" }];
         }
+        
+        if (this.panel.visible) {
+            this.panel.webview.html = this.getWebviewContent(this.panel.webview, this.data);
+        }
+    }
 
-
-        console.log("Completion List:", len, this.data.length);
-        panel.webview.html = this.getWebviewContent(panel.webview, this.data);
+    // 显示Webview面板
+    public showPanel() {
+        this.data = []
+        // const panel = getPanel();
+        this.panel = vscode.window.createWebviewPanel(
+            'mode code view',
+            '代码补全',
+            vscode.ViewColumn.Beside,
+            {
+                enableScripts: true,
+                retainContextWhenHidden: true
+            }
+        );
+        this.panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'modeCodeReplace':
+                        this.replaceEditorContent(message.data);
+                        return;
+                }
+            }
+        );
+        this.setData();
+        // this.panel.webview.html = this.getWebviewContent(this.panel.webview, this.data);
     }
 
     private getWebviewContent(
@@ -142,7 +161,7 @@ export class ModeCodeView {
             (editBuilder) => {
                 editBuilder.replace(new vscode.Range(
                     new vscode.Position(data.position_start_line, data.position_start_character),
-                    new vscode.Position(data.position_end_line, data.position_end_character)), 
+                    new vscode.Position(data.position_end_line, data.position_end_character)),
                     data.code);
             }
         )
