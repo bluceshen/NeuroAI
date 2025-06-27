@@ -44,6 +44,16 @@ export class ModeCodeView {
                 retainContextWhenHidden: true
             }
         );
+        this.panel.webview.onDidReceiveMessage(
+            message => {
+                switch (message.command) {
+                    case 'modeCodeReplace':
+                        console.log("Tatch ", message.command)
+                        this.replaceEditorContent(message.data as number);
+                        return;
+                }
+            }
+        );
     }
 
     public setData() {
@@ -77,7 +87,7 @@ export class ModeCodeView {
             // list不是数组，初始化this.data为默认值
             // this.data = [{ model: "pdd", position: new vscode.Range(new vscode.Position(0, 0), new vscode.Position(0, 0)), code: "ghjgh" }];
         }
-        
+
         if (this.panel.visible) {
             this.panel.webview.html = this.getWebviewContent(this.panel.webview, this.data);
         }
@@ -100,7 +110,8 @@ export class ModeCodeView {
             message => {
                 switch (message.command) {
                     case 'modeCodeReplace':
-                        this.replaceEditorContent(message.data);
+                        console.log("Tatch ", message.command)
+                        this.replaceEditorContent(message.data as number);
                         return;
                 }
             }
@@ -129,7 +140,7 @@ export class ModeCodeView {
                 <h3>${item.model}</h3>
                 <pre>${item.code}</pre>
                 <button class="replace-btn" data-index="${index}">替换代码</button>
-                <div class="file-info">[${item.position_end_line}-${item.position_end_line}]</div>
+                <div class="file-info">[${item.position_start_line}-${item.position_end_line}]</div>
             </div>
             `
         }).join('');
@@ -155,6 +166,7 @@ export class ModeCodeView {
     // 替换编辑器内容
     private async replaceEditorContent(index: number) {
         const data = this.data[index];
+        console.log("Index is ", index)
 
         const edit = vscode.window.activeTextEditor;
         edit?.edit(

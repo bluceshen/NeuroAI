@@ -594,27 +594,42 @@ export class Chat extends Base {
 
     const conversation = [systemMessage, ...messages.slice(0, -1)]
 
+    // 确保content是字符串类型
+    const userContent = `${lastMessage.content}\n\n${additionalContext.trim()}`.trim() || " ";
+
     conversation.push({
       role: USER,
-      content: `${lastMessage.content}\n\n${additionalContext.trim()}`.trim() || " ",
-      id // Add conversation ID to user message
+      content: userContent, // 确保这里是字符串
+      id
     })
 
     return conversation.map((message) => {
-      const stringContent = message.content as string
+      // 确保所有消息的content都是字符串
+      let contentString = "";
+
+      if (typeof message.content === "string") {
+        contentString = message.content;
+      } else if (Array.isArray(message.content)) {
+        // 如果是数组，转换为字符串
+        contentString = message.content.join("");
+      } else {
+        // 其他类型转换为字符串
+        contentString = String(message.content);
+      }
 
       if ([SYSTEM, ASSISTANT].includes(message.role)) {
-        // Preserve the conversationId if it exists
         return {
           ...message,
+          content: contentString, // 确保是字符串
           conversationId: id || message.id
         }
       }
 
       return {
         ...message,
-        conversationId: id || message.id, // Preserve the conversationId
-        content: stringContent.replace(/&lt;/g, "<")
+        conversationId: id || message.id,
+        content: contentString
+          .replace(/&lt;/g, "<")
           .replace(/@problems/g, "").trim()
           .replace(/@workspace/g, "").trim()
           .replace(/&amp;/g, "&")
@@ -746,8 +761,8 @@ export class Chat extends Base {
       try {
         const webData = await crawler.searchAndScrape(text)
         this._webContext = webData
-        .map((content, index) => `[Result ${index + 1}]:\n${content}`)
-        .join("\n\n");
+          .map((content, index) => `[Result ${index + 1}]:\n${content}`)
+          .join("\n\n");
         console.log("completion webData:", webData)
       } catch (error) {
         console.error('completion crawl data error:', error)
