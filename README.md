@@ -1,8 +1,8 @@
-# Twinny
+# NeuroFill AI Coding
 
-Twinny is a free AI extension for Visual Studio Code, offering powerful AI-assisted coding features.
+NeuroFill AI Coding是一个基于开源项目Twinny 开发的免费的 Visual Studio Code AI 扩展，提供强大的 AI 辅助编码功能。
 
-## Supported Providers
+## 支持的提供商
 
 - localhost OpenAI/Ollama Compatible API (default)
 - [OpenAI](https://openai.com)
@@ -14,57 +14,51 @@ Twinny is a free AI extension for Visual Studio Code, offering powerful AI-assis
 - [Perplexity](https://www.perplexity.ai)
 - [Groq](https://groq.com)
 
-## 🚀 Getting Started
+## 🚀 开始使用
 
-For a quick start guide, visit our [documentation](https://docs.twinny.dev).
+- vscode安装NeuroFill AI Coding
+- 本地部署Ollama或购买私人大模型API
+- 添加AI providers
 
-## Main Features
+## 主要功能
 
-### Fill in the Middle Code Completion
-Twinny provides AI-powered real-time code suggestions to enhance your coding experience.
+### 多模型代码中间填充补全
 
-### Chat with AI About Your Code
-Use the sidebar to discuss your code with AI, getting explanations, tests, refactoring suggestions, and more.
+NeuroFill AI Coding 提供 AI 驱动的实时代码建议，增强您的编码体验；
 
-### Additional Features
-- Online and offline operation
-- Customizable API endpoints
-- Preserved chat conversations
-- OpenAI API standard compliance
-- Single and multiline fill-in-the-middle completions
-- Customizable prompt templates
-- Git commit message generation
-- Easy installation via VS Code marketplace
-- Configurable settings (API provider, model, port, path)
-- Direct code solution acceptance
-- New document creation from code blocks
-- Side-by-side diff view
-- Full-screen chat mode
-- Code solution block copying
-- Workspace embeddings for context-aware assistance
-- Symmetry network integration for P2P AI inference
+同时接收多个模型的补全代码，快速挑选您更满意的结果。
 
-### Workspace Embeddings
-Twinny uses workspace embeddings to provide context-aware AI assistance, improving the relevance of suggestions.
+### 多模型对话
 
-### Symmetry Network
-A decentralized P2P network for sharing AI inference resources, enhancing the capabilities of Twinny.
+使用侧边栏同时与多个 AI 讨论您的代码，获取解释、测试、重构建议等。
 
-## Known Issues
+### RAG
 
-For troubleshooting and known issues, please check our GitHub [issues page](https://github.com/rjmacarthy/twinny/issues).
+引入检索增强生成功能，提升AI对话体验。
 
-## Contributing
+### 附加功能
 
-We welcome contributions! Please contact us via [Twitter](https://x.com/twinnydotdev), describe your proposed changes in an issue, and submit a pull request. Twinny is MIT licensed.
+- 在线和离线操作
+- 可自定义的 API 端点
+- 保存聊天对话
+- 兼容 OpenAI API 标准
+- 单行和多行中间填充补全
+- 可自定义的提示模板
+- Git 提交信息生成
+- 通过 VS Code 市场轻松安装
+- 可配置的设置（API 提供商、模型、端口、路径）
+- 直接接受代码解决方案
+- 从代码块创建新文档
+- 并排差异视图
+- 全屏聊天模式
+- 代码解决方案块复制
+- 工作区嵌入以获得上下文感知的辅助
+- Symmetry 网络集成用于 P2P AI 推理
 
-## Support Twinny
+### 工作区嵌入
 
-Twinny is free and open-source. If you'd like to support the project, donations are appreciated:
-Bitcoin: `1PVavNkMmBmUz8nRYdnVXiTgXrAyaxfehj`
+Twinny 使用工作区嵌入提供上下文感知的 AI 辅助，提高建议的相关性。
 
-For updates, follow us on Twitter: https://x.com/twinnydotdev
+### Symmetry 网络
 
-## Disclaimer
-
-Twinny is actively developed and provided "as is". Functionality may vary between updates.
+用于共享 AI 推理资源的去中心化 P2P 网络，增强 Twinny 的功能。
