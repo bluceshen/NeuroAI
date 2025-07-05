@@ -32,8 +32,8 @@ export function escapeHtml(unsafe: string): string {
 }
 
 const deepseek = new OpenAI({
-    baseURL: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    apiKey: ' ',
+    baseURL: 'https://api.deepseek.com',
+    apiKey: 'sk-74b270013b2045b3be516f0e27ef4f07',
 })
 
 const parse = (data: RequestData) => {
