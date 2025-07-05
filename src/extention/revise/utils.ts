@@ -32,19 +32,25 @@ export function escapeHtml(unsafe: string): string {
 }
 
 const deepseek = new OpenAI({
-    baseURL: 'https://api.deepseek.com',
-    apiKey: 'sk-74b270013b2045b3be516f0e27ef4f07',
+    baseURL: 'https://vip.apiyi.com/v1',
+    apiKey: 'sk-PzDXw2zVorMNVCcS4eAfD6FbAeFc48De82B6831cAd16156c',
+    // baseURL: 'https://dashscope.aliyuncs.com/api/v1/',
+    // apiKey: 'sk-PzDXw2zVorMNVCcS4eAfD6FbAeFc48De82B6831cAd16156c',
 })
 
 const parse = (data: RequestData) => {
     return `
-        You are an assistant, 
-        please rewrite the given code as per the specified requirements. 
-        Directly give a new code for the specified requirements.
-        Original code: ${escapeHtml(data.selectedCode)}, 
-        requirements: ${escapeHtml(data.requirements)}, 
-        code style: ${escapeHtml(data.codeStyle)}, 
-        comment or not: ${data.addComments ? "Yes" : "No"}.
+        你是一个代码重写助手，请严格遵循以下要求：
+        1. 仅返回重写后的代码
+        2. 不要包含任何解释性文本、Markdown标记或额外说明
+        3. ${data.addComments ? "保留必要注释" : "移除所有注释"}
+        4. 严格遵守代码风格: ${data.codeStyle}
+
+        原始代码:
+        ${data.selectedCode}
+
+        修改要求:
+        ${data.requirements}.
     `;
 }
 
@@ -58,7 +64,7 @@ export async function generateCodeRevision(data: RequestData): Promise<string> {
                     content: parse(data)
                 }
             ],
-            model: "deepseek-r1",
+            model: "gpt-3.5-turbo-0125",
         });
 
         if (completion.choices?.[0]?.message?.content) {

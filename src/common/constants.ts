@@ -133,6 +133,7 @@ export const OPEN_AI_COMPATIBLE_PROVIDERS = {
   OpenWebUI: "openwebui",
   Ollama: "ollama",
   Twinny: "twinny",
+  // Twinny: "NEURO AI",
   OpenAICompatible: "openai-compatible"
 }
 
