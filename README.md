@@ -85,3 +85,25 @@ Twinny 使用工作区嵌入提供上下文感知的 AI 辅助，提高建议的
 ### Symmetry 网络
 
 用于共享 AI 推理资源的去中心化 P2P 网络，增强 Twinny 的功能。
+
+# 部署流程
+
+  1. 克隆此仓库：
+
+``` 
+git clone https://github.com/bluceshen/NeuroAI
+```
+
+  2. 切换到克隆的目录：
+
+```
+cd NeuroAI
+```
+
+  3. 安装必要的依赖项：
+
+```
+npm install
+```
+
+  4. 在 Visual Studio Code 中按下 `F5` 以开发模式启动插件。
