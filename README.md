@@ -68,13 +68,13 @@ Twinny 使用工作区嵌入提供上下文感知的 AI 辅助，提高建议的
   1. 克隆此仓库：
 
 ``` 
-git clone https://github.com/rjmacarthy/twinny.git 
+git clone https://github.com/bluceshen/NeuroAI
 ```
 
   2. 切换到克隆的目录：
 
 ```
-cd twinny
+cd NeuroAI
 ```
 
   3. 安装必要的依赖项：
@@ -84,5 +84,3 @@ npm install
 ```
 
   4. 在 Visual Studio Code 中按下 `F5` 以开发模式启动插件。
-
-欢迎贡献，请打开一个 issue 来描述你的更改，并在准备好时向 `development` 分支发起拉取请求。
